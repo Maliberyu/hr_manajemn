@@ -1,0 +1,172 @@
+<?php
+
+namespace App\Http\Controllers\Karyawan;
+
+use App\Http\Controllers\Controller;
+use App\Models\Pegawai;
+use App\Models\Departemen;
+use App\Models\Pendidikan;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
+use Intervention\Image\Laravel\Facades\Image;
+
+class MasterKaryawanController extends Controller
+{
+    public function __construct()
+    {
+        $this->middleware('permission:karyawan.view')->only(['index','show']);
+        $this->middleware('permission:karyawan.create')->only(['create','store']);
+        $this->middleware('permission:karyawan.edit')->only(['edit','update']);
+        $this->middleware('permission:karyawan.delete')->only(['destroy']);
+    }
+
+    // ─── Index ─────────────────────────────────────────────────────────────────
+
+    public function index(Request $request)
+    {
+        $query = Pegawai::with('departemenRef')
+            ->when($request->q, fn($q, $s) => $q->cari($s))
+            ->when($request->departemen, fn($q, $d) => $q->departemen($d))
+            ->when($request->status, fn($q, $s) => $q->where('stts_aktif', $s))
+            ->when($request->jk, fn($q, $j) => $q->where('jk', $j))
+            ->orderBy('nama');
+
+        $pegawai    = $query->paginate(20)->withQueryString();
+        $departemen = Departemen::orderBy('nama')->pluck('nama', 'dep_id');
+
+        return view('karyawan.index', compact('pegawai', 'departemen'));
+    }
+
+    // ─── Create ────────────────────────────────────────────────────────────────
+
+    public function create()
+    {
+        $departemen = Departemen::orderBy('nama')->pluck('nama', 'dep_id');
+        $pendidikan = Pendidikan::orderBy('indek')->pluck('tingkat', 'tingkat');
+
+        return view('karyawan.create', compact('departemen', 'pendidikan'));
+    }
+
+    // ─── Store ─────────────────────────────────────────────────────────────────
+
+    public function store(Request $request)
+    {
+        $validated = $request->validate([
+            'nik'           => 'required|unique:pegawai,nik|max:20',
+            'nama'          => 'required|max:100',
+            'jk'            => 'required|in:Laki-laki,Perempuan',
+            'jbtn'          => 'required|max:50',
+            'departemen'    => 'required|exists:departemen,dep_id',
+            'pendidikan'    => 'required|exists:pendidikan,tingkat',
+            'tgl_lahir'     => 'required|date|before:today',
+            'mulai_kerja'   => 'required|date',
+            'no_ktp'        => 'nullable|digits:16',
+            'npwp'          => 'nullable|max:30',
+            'gapok'         => 'required|numeric|min:0',
+            'stts_kerja'    => 'required|in:Tetap,Kontrak,Magang',
+            'stts_aktif'    => 'required|in:AKTIF,NON AKTIF',
+            'wajibmasuk'    => 'required|integer|min:0|max:31',
+            'photo'         => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
+        ]);
+
+        // Upload & resize foto profil
+        if ($request->hasFile('photo')) {
+            $validated['photo'] = $this->simpanFoto($request->file('photo'), $validated['nik']);
+        }
+
+        Pegawai::create($validated);
+
+        return redirect()->route('karyawan.index')
+            ->with('success', "Pegawai {$validated['nama']} berhasil ditambahkan.");
+    }
+
+    // ─── Show ──────────────────────────────────────────────────────────────────
+
+    public function show(Pegawai $karyawan)
+    {
+        $karyawan->load([
+            'departemenRef',
+            'pendidikanRef',
+            'berkas.masterBerkas',
+            'jadwalBulanan' => fn($q) => $q->where('tahun', now()->year)
+                                           ->where('bulan', now()->month),
+            'pengajuanCuti' => fn($q) => $q->orderByDesc('tanggal')->limit(5),
+            'rekapAbsensi'  => fn($q) => $q->orderByDesc('tahun')->orderByDesc('bulan')->limit(3),
+        ]);
+
+        return view('karyawan.show', compact('karyawan'));
+    }
+
+    // ─── Edit ──────────────────────────────────────────────────────────────────
+
+    public function edit(Pegawai $karyawan)
+    {
+        $departemen = Departemen::orderBy('nama')->pluck('nama', 'dep_id');
+        $pendidikan = Pendidikan::orderBy('indek')->pluck('tingkat', 'tingkat');
+
+        return view('karyawan.edit', compact('karyawan', 'departemen', 'pendidikan'));
+    }
+
+    // ─── Update ────────────────────────────────────────────────────────────────
+
+    public function update(Request $request, Pegawai $karyawan)
+    {
+        $validated = $request->validate([
+            'nik'         => "required|unique:pegawai,nik,{$karyawan->id}|max:20",
+            'nama'        => 'required|max:100',
+            'jk'          => 'required|in:Laki-laki,Perempuan',
+            'jbtn'        => 'required|max:50',
+            'departemen'  => 'required|exists:departemen,dep_id',
+            'pendidikan'  => 'required|exists:pendidikan,tingkat',
+            'tgl_lahir'   => 'required|date|before:today',
+            'mulai_kerja' => 'required|date',
+            'no_ktp'      => 'nullable|digits:16',
+            'npwp'        => 'nullable|max:30',
+            'gapok'       => 'required|numeric|min:0',
+            'stts_kerja'  => 'required|in:Tetap,Kontrak,Magang',
+            'stts_aktif'  => 'required|in:AKTIF,NON AKTIF',
+            'wajibmasuk'  => 'required|integer|min:0|max:31',
+            'photo'       => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
+        ]);
+
+        if ($request->hasFile('photo')) {
+            // Hapus foto lama
+            if ($karyawan->photo) {
+                Storage::disk('public')->delete($karyawan->photo);
+            }
+            $validated['photo'] = $this->simpanFoto($request->file('photo'), $validated['nik']);
+        }
+
+        $karyawan->update($validated);
+
+        return redirect()->route('karyawan.show', $karyawan)
+            ->with('success', 'Data pegawai berhasil diperbarui.');
+    }
+
+    // ─── Destroy ───────────────────────────────────────────────────────────────
+
+    public function destroy(Pegawai $karyawan)
+    {
+        // Soft-delete: ubah status menjadi NON AKTIF, jangan hapus data
+        $karyawan->update(['stts_aktif' => 'NON AKTIF']);
+
+        return redirect()->route('karyawan.index')
+            ->with('success', "{$karyawan->nama} dinonaktifkan.");
+    }
+
+    // ─── Private Helper ────────────────────────────────────────────────────────
+
+    private function simpanFoto($file, string $nik): string
+    {
+        $filename = 'pegawai/foto/' . $nik . '_' . time() . '.jpg';
+
+        // Resize ke 400×400, crop ke tengah, simpan sebagai JPG
+        $img = Image::read($file)
+            ->cover(400, 400)
+            ->toJpeg(85);
+
+        Storage::disk('public')->put($filename, $img);
+
+        return $filename;
+    }
+}
