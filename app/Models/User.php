@@ -2,35 +2,69 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
-use Database\Factories\UserFactory;
-use Illuminate\Database\Eloquent\Attributes\Fillable;
-use Illuminate\Database\Eloquent\Attributes\Hidden;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Spatie\Permission\Traits\HasRoles;
 
-#[Fillable(['name', 'email', 'password'])]
-#[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
-    /** @use HasFactory<UserFactory> */
-    use HasFactory, Notifiable;
+    use Notifiable, HasRoles;
 
-    /**
-     * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
-     */
-    protected function casts(): array
+    // Tabel BARU — dibuat via migration, bukan dari SIK
+    protected $table = 'users';
+
+    protected $fillable = [
+        'pegawai_id',       // FK ke pegawai.id (nullable untuk admin murni)
+        'name',
+        'email',
+        'username',         // alternatif login dengan username/NIK
+        'password',
+        'is_active',
+        'last_login_at',
+        'avatar',
+    ];
+
+    protected $hidden = [
+        'password',
+        'remember_token',
+    ];
+
+    protected $casts = [
+        'email_verified_at' => 'datetime',
+        'last_login_at'     => 'datetime',
+        'password'          => 'hashed',
+        'is_active'         => 'boolean',
+    ];
+
+    // ─── Scopes ────────────────────────────────────────────────────────────────
+
+    public function scopeAktif($query)
     {
-        return [
-            'email_verified_at' => 'datetime',
-            'password' => 'hashed',
-        ];
+        return $query->where('is_active', true);
+    }
+
+    // ─── Relasi ────────────────────────────────────────────────────────────────
+
+    public function pegawai(): BelongsTo
+    {
+        return $this->belongsTo(Pegawai::class, 'pegawai_id', 'id');
+    }
+
+    // ─── Helper ────────────────────────────────────────────────────────────────
+
+    public function isAdmin(): bool
+    {
+        return $this->hasRole('super_admin');
+    }
+
+    public function isHR(): bool
+    {
+        return $this->hasAnyRole(['hr_manager', 'super_admin']);
+    }
+
+    public function getNamaLengkapAttribute(): string
+    {
+        return $this->pegawai?->nama ?? $this->name;
     }
 }
-
-
-///test committtt
-// hidup jokowii
