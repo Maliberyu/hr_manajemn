@@ -12,13 +12,24 @@ use App\Http\Controllers\Payroll\PayrollController;
 use App\Http\Controllers\Lembur\LemburController;
 use App\Http\Controllers\Rekrutmen\RekrutmenController;
 use App\Http\Controllers\Training\TrainingController;
+use App\Http\Controllers\Login\LoginController;
 
 // ─── Auth (Breeze) ─────────────────────────────────────────────────────────────
-require __DIR__ . '/auth.php';
+// require __DIR__ . '/auth.php'; dihapus karena kita custom login/logout sendiri
 
 // ─── Redirect root ─────────────────────────────────────────────────────────────
 Route::get('/', fn() => redirect()->route('dashboard'));
 
+// ── LOGIN --------──────────────────────────────────────────────────────────────
+Route::get('/login', [LoginController::class, 'showLogin'])->name('login');
+Route::post('/login', [LoginController::class, 'login']);
+Route::post('/logout', [LoginController::class, 'logout']);
+
+Route::middleware(['auth'])->group(function () {
+    Route::get('/dashboard', function () {
+        return view('dashboard');
+    });
+});
 // ═══════════════════════════════════════════════════════════════════════════════
 // SEMUA ROUTE BUTUH LOGIN
 // ═══════════════════════════════════════════════════════════════════════════════
