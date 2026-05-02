@@ -50,7 +50,7 @@ class MasterKaryawanController extends Controller
         $validated = $request->validate([
             'nik'           => 'required|unique:pegawai,nik|max:20',
             'nama'          => 'required|max:100',
-            'jk'            => 'required|in:Laki-laki,Perempuan',
+            'jk'            => 'required|in:Pria,Wanita',
             'jbtn'          => 'required|max:50',
             'departemen'    => 'required|exists:departemen,dep_id',
             'pendidikan'    => 'required|exists:pendidikan,tingkat',
@@ -59,8 +59,8 @@ class MasterKaryawanController extends Controller
             'no_ktp'        => 'nullable|digits:16',
             'npwp'          => 'nullable|max:30',
             'gapok'         => 'required|numeric|min:0',
-            'stts_kerja'    => 'required|in:Tetap,Kontrak,Magang',
-            'stts_aktif'    => 'required|in:AKTIF,NON AKTIF',
+            'stts_kerja'    => 'required|max:3',
+            'stts_aktif'    => 'required|in:AKTIF,CUTI,KELUAR,TENAGA LUAR',
             'wajibmasuk'    => 'required|integer|min:0|max:31',
             'photo'         => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
         ]);
@@ -110,7 +110,7 @@ class MasterKaryawanController extends Controller
         $validated = $request->validate([
             'nik'         => "required|unique:pegawai,nik,{$karyawan->id}|max:20",
             'nama'        => 'required|max:100',
-            'jk'          => 'required|in:Laki-laki,Perempuan',
+            'jk'          => 'required|in:Pria,Wanita',
             'jbtn'        => 'required|max:50',
             'departemen'  => 'required|exists:departemen,dep_id',
             'pendidikan'  => 'required|exists:pendidikan,tingkat',
@@ -119,8 +119,8 @@ class MasterKaryawanController extends Controller
             'no_ktp'      => 'nullable|digits:16',
             'npwp'        => 'nullable|max:30',
             'gapok'       => 'required|numeric|min:0',
-            'stts_kerja'  => 'required|in:Tetap,Kontrak,Magang',
-            'stts_aktif'  => 'required|in:AKTIF,NON AKTIF',
+            'stts_kerja'  => 'required|max:3',
+            'stts_aktif'  => 'required|in:AKTIF,CUTI,KELUAR,TENAGA LUAR',
             'wajibmasuk'  => 'required|integer|min:0|max:31',
             'photo'       => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
         ]);
@@ -144,7 +144,7 @@ class MasterKaryawanController extends Controller
     public function destroy(Pegawai $karyawan)
     {
         // Soft-delete: ubah status menjadi NON AKTIF, jangan hapus data
-        $karyawan->update(['stts_aktif' => 'NON AKTIF']);
+        $karyawan->update(['stts_aktif' => 'KELUAR']);
 
         return redirect()->route('karyawan.index')
             ->with('success', "{$karyawan->nama} dinonaktifkan.");

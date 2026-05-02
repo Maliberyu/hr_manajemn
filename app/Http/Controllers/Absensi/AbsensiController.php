@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Absensi;
 
 use App\Http\Controllers\Controller;
 use App\Models\Absensi;
+use App\Models\LokasiAbsensi;
 use App\Models\Pegawai;
 use App\Models\RekapAbsensi;
 use App\Models\JadwalPegawai;
@@ -104,7 +105,6 @@ class AbsensiController extends Controller
         $pegawai = auth()->user()->pegawai;
         abort_unless($pegawai, 403, 'Akun tidak terhubung ke data pegawai.');
 
-        // Cek sudah check-in hari ini
         $sudah = Absensi::where('pegawai_id', $pegawai->id)
                         ->whereDate('tanggal', today())
                         ->exists();
@@ -114,9 +114,35 @@ class AbsensiController extends Controller
         }
 
         $request->validate([
-            'lat' => 'nullable|numeric',
-            'lng' => 'nullable|numeric',
+            'lat' => 'required|numeric',
+            'lng' => 'required|numeric',
         ]);
+
+        // Validasi radius — cek apakah dalam jangkauan salah satu lokasi aktif
+        $lokasiList    = LokasiAbsensi::aktif()->get();
+        $lokasiValid   = false;
+        $jarakTerdekat = PHP_FLOAT_MAX;
+        $namaLokasi    = null;
+
+        foreach ($lokasiList as $lok) {
+            $jarak = LokasiAbsensi::hitungJarak($lok->lat, $lok->lng, $request->lat, $request->lng);
+            if ($jarak < $jarakTerdekat) {
+                $jarakTerdekat = $jarak;
+                $namaLokasi    = $lok->nama;
+            }
+            if ($lok->dalamRadius($request->lat, $request->lng)) {
+                $lokasiValid = true;
+                $namaLokasi  = $lok->nama;
+                break;
+            }
+        }
+
+        if ($lokasiList->isNotEmpty() && !$lokasiValid) {
+            return response()->json([
+                'message' => "Anda berada di luar radius absensi ({$namaLokasi}). Jarak Anda: " . round($jarakTerdekat) . ' m.',
+                'jarak'   => round($jarakTerdekat),
+            ], 422);
+        }
 
         $jamMasuk = now();
         $jadwal   = JadwalPegawai::where('id', $pegawai->id)
@@ -130,7 +156,7 @@ class AbsensiController extends Controller
             $jadwal
         );
 
-        $absensi = Absensi::create([
+        Absensi::create([
             'pegawai_id'      => $pegawai->id,
             'tanggal'         => today(),
             'jam_masuk'       => $jamMasuk,
@@ -139,11 +165,12 @@ class AbsensiController extends Controller
             'metode'          => 'mobile',
             'lat_masuk'       => $request->lat,
             'lng_masuk'       => $request->lng,
+            'lokasi_valid'    => $lokasiValid,
             'diinput_oleh'    => auth()->id(),
         ]);
 
         return response()->json([
-            'message'         => 'Check-in berhasil.',
+            'message'         => 'Check-in berhasil! ' . ($terlambat > 0 ? "Terlambat {$terlambat} menit." : 'Tepat waktu.'),
             'jam_masuk'       => $jamMasuk->format('H:i'),
             'terlambat_menit' => $terlambat,
         ]);
@@ -162,9 +189,31 @@ class AbsensiController extends Controller
                           ->firstOrFail();
 
         $request->validate([
-            'lat' => 'nullable|numeric',
-            'lng' => 'nullable|numeric',
+            'lat' => 'required|numeric',
+            'lng' => 'required|numeric',
         ]);
+
+        // Validasi radius check-out
+        $lokasiList  = LokasiAbsensi::aktif()->get();
+        $lokasiValid = false;
+
+        foreach ($lokasiList as $lok) {
+            if ($lok->dalamRadius($request->lat, $request->lng)) {
+                $lokasiValid = true;
+                break;
+            }
+        }
+
+        if ($lokasiList->isNotEmpty() && !$lokasiValid) {
+            $jarak = $lokasiList->map(fn($l) =>
+                LokasiAbsensi::hitungJarak($l->lat, $l->lng, $request->lat, $request->lng)
+            )->min();
+
+            return response()->json([
+                'message' => 'Anda berada di luar radius absensi. Jarak Anda: ' . round($jarak) . ' m.',
+                'jarak'   => round($jarak),
+            ], 422);
+        }
 
         $absensi->update([
             'jam_keluar' => now(),

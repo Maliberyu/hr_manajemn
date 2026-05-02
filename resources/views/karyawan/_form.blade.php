@@ -60,8 +60,8 @@
                     <select name="jk" required
                             class="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white @error('jk') border-red-400 @enderror">
                         <option value="">-- Pilih --</option>
-                        <option value="Laki-laki" {{ old('jk', $k?->jk) === 'Laki-laki' ? 'selected' : '' }}>Laki-laki</option>
-                        <option value="Perempuan" {{ old('jk', $k?->jk) === 'Perempuan' ? 'selected' : '' }}>Perempuan</option>
+                        <option value="Pria" {{ old('jk', $k?->jk) === 'Pria' ? 'selected' : '' }}>Pria</option>
+                        <option value="Wanita" {{ old('jk', $k?->jk) === 'Wanita' ? 'selected' : '' }}>Wanita</option>
                     </select>
                     @error('jk') <p class="text-xs text-red-500 mt-1">{{ $message }}</p> @enderror
                 </div>
@@ -166,8 +166,8 @@
                     <select name="stts_kerja" required
                             class="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white @error('stts_kerja') border-red-400 @enderror">
                         <option value="">-- Pilih --</option>
-                        @foreach(['Tetap','Kontrak','Magang'] as $opt)
-                            <option value="{{ $opt }}" {{ old('stts_kerja', $k?->stts_kerja) === $opt ? 'selected' : '' }}>{{ $opt }}</option>
+                        @foreach(['Tet' => 'Tetap', 'Kon' => 'Kontrak', 'Mag' => 'Magang', 'Hon' => 'Honorer'] as $val => $label)
+                            <option value="{{ $val }}" {{ old('stts_kerja', $k?->stts_kerja) === $val ? 'selected' : '' }}>{{ $label }}</option>
                         @endforeach
                     </select>
                     @error('stts_kerja') <p class="text-xs text-red-500 mt-1">{{ $message }}</p> @enderror
@@ -178,8 +178,9 @@
                     <label class="block text-xs font-medium text-gray-600 mb-1">Status Aktif <span class="text-red-500">*</span></label>
                     <select name="stts_aktif" required
                             class="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white @error('stts_aktif') border-red-400 @enderror">
-                        <option value="AKTIF" {{ old('stts_aktif', $k?->stts_aktif ?? 'AKTIF') === 'AKTIF' ? 'selected' : '' }}>Aktif</option>
-                        <option value="NON AKTIF" {{ old('stts_aktif', $k?->stts_aktif) === 'NON AKTIF' ? 'selected' : '' }}>Non Aktif</option>
+                        @foreach(['AKTIF' => 'Aktif', 'CUTI' => 'Cuti', 'KELUAR' => 'Keluar', 'TENAGA LUAR' => 'Tenaga Luar'] as $val => $label)
+                            <option value="{{ $val }}" {{ old('stts_aktif', $k?->stts_aktif ?? 'AKTIF') === $val ? 'selected' : '' }}>{{ $label }}</option>
+                        @endforeach
                     </select>
                     @error('stts_aktif') <p class="text-xs text-red-500 mt-1">{{ $message }}</p> @enderror
                 </div>

@@ -34,9 +34,19 @@ class User extends Authenticatable
         'last_login_at'  => 'datetime',
     ];
 
-    // Status values: 'aktif', 'tidak aktif', 'suspend'
     public function isAktif(): bool
     {
         return $this->status === 'aktif';
+    }
+
+    /** Stub untuk kompatibilitas sebelum Spatie roles diinstall */
+    public function hasRole($roles): bool
+    {
+        return false;
+    }
+
+    public function hasAnyRole($roles): bool
+    {
+        return false;
     }
 }

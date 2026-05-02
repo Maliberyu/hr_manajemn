@@ -5,6 +5,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Karyawan\MasterKaryawanController;
 use App\Http\Controllers\Karyawan\BerkasPegawaiController;
 use App\Http\Controllers\Absensi\AbsensiController;
+use App\Http\Controllers\Absensi\LokasiAbsensiController;
 use App\Http\Controllers\Cuti\CutiController;
 use App\Http\Controllers\Shift\ShiftController;
 use App\Http\Controllers\Kinerja\KinerjaController;
@@ -83,6 +84,15 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/karyawan/{karyawan}',           [AbsensiController::class, 'show'])->name('show');
         Route::get('/{absensi}/edit',                [AbsensiController::class, 'edit'])->name('edit');
         Route::put('/{absensi}',                     [AbsensiController::class, 'update'])->name('update');
+
+        // Manajemen lokasi GPS
+        Route::prefix('lokasi')->name('lokasi.')->group(function () {
+            Route::get('/',                          [LokasiAbsensiController::class, 'index'])->name('index');
+            Route::post('/',                         [LokasiAbsensiController::class, 'store'])->name('store');
+            Route::put('/{lokasi}',                  [LokasiAbsensiController::class, 'update'])->name('update');
+            Route::delete('/{lokasi}',               [LokasiAbsensiController::class, 'destroy'])->name('destroy');
+            Route::patch('/{lokasi}/toggle',         [LokasiAbsensiController::class, 'toggle'])->name('toggle');
+        });
     });
 
     // ═══════════════════════════════════════════════════════════════════════════
