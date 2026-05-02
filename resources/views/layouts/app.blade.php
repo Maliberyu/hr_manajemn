@@ -207,7 +207,7 @@
 
         {{-- FOOTER --}}
         <footer class="py-3 px-6 border-t border-gray-100 text-center text-xs text-gray-400">
-            &copy; {{ date('Y') }} HR Manajemen — Sistem Informasi SDM Terpadu
+            &copy; {{ date('Y') }} HR Manajemen — By IT RSIA Respati; All rights reserved.
         </footer>
 
     </div>

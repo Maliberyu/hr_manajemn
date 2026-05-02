@@ -83,7 +83,7 @@ class MasterKaryawanController extends Controller
         $karyawan->load([
             'departemenRef',
             'pendidikanRef',
-            'berkas.masterBerkas',
+            'berkas.jenis',
             'jadwalBulanan' => fn($q) => $q->where('tahun', now()->year)
                                            ->where('bulan', now()->month),
             'pengajuanCuti' => fn($q) => $q->orderByDesc('tanggal')->limit(5),
