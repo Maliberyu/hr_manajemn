@@ -13,6 +13,7 @@ use App\Http\Controllers\Lembur\LemburController;
 use App\Http\Controllers\Rekrutmen\RekrutmenController;
 use App\Http\Controllers\Training\TrainingController;
 use App\Http\Controllers\Login\LoginController;
+use App\Http\Controllers\Register\RegisterController;
 
 // ─── Auth (Breeze) ─────────────────────────────────────────────────────────────
 // require __DIR__ . '/auth.php'; dihapus karena kita custom login/logout sendiri
@@ -24,6 +25,11 @@ Route::get('/', fn() => redirect()->route('dashboard'));
 Route::get('/login', [LoginController::class, 'showLogin'])->name('login');
 Route::post('/login', [LoginController::class, 'login']);
 Route::post('/logout', [LoginController::class, 'logout']);
+
+
+// ── Register --------──────────────────────────────────────────────────────────────
+Route::get('/register', [RegisterController::class, 'showRegister'])->name('register');
+Route::post('/register', [RegisterController::class, 'register'])->name('register.post');
 
 Route::middleware(['auth'])->group(function () {
     Route::get('/dashboard', function () {
