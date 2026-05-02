@@ -10,23 +10,23 @@
 
     {{-- SUCCESS --}}
     @if(session('success'))
-    <div class="success">
-        {{ session('success') }}
-    </div>
+        <div class="success">
+            {{ session('success') }}
+        </div>
     @endif
 
     {{-- ERROR --}}
     @if(session('error'))
-    <div class="error">
-        {{ session('error') }}
-    </div>
+        <div class="error">
+            {{ session('error') }}
+        </div>
     @endif
 
     {{-- VALIDATION ERROR --}}
     @if($errors->any())
-    <div class="error">
-        {{ $errors->first() }}
-    </div>
+        <div class="error">
+            {{ $errors->first() }}
+        </div>
     @endif
 
     <div class="login-container">
@@ -34,28 +34,22 @@
             <h2>Register HR System</h2>
             <p class="subtitle">Buat akun baru</p>
 
-            @if($errors->any())
-            <div class="error">
-                {{ $errors->first() }}
-            </div>
-            @endif
-
             <form method="POST" action="{{ route('register.post') }}">
                 @csrf
 
                 <div class="form-group">
                     <label>Nama</label>
-                    <input type="text" name="nama" required>
+                    <input type="text" name="nama" value="{{ old('nama') }}" required>
                 </div>
 
                 <div class="form-group">
                     <label>Email</label>
-                    <input type="email" name="email" required>
+                    <input type="email" name="email" value="{{ old('email') }}" required>
                 </div>
 
                 <div class="form-group">
                     <label>Jabatan</label>
-                    <input type="text" name="jabatan" required>
+                    <input type="text" name="jabatan" value="{{ old('jabatan') }}" required>
                 </div>
 
                 <div class="form-group password-group">
@@ -86,5 +80,4 @@
     </script>
 
 </body>
-
 </html>

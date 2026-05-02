@@ -27,13 +27,22 @@ class RegisterController extends Controller
                 'jabatan' => 'required|string|max:100'
             ]);
 
+            // \App\Models\User::create([
+            //     'nama' => $request->nama,
+            //     'email' => $request->email,
+            //     'password' => \Illuminate\Support\Facades\Hash::make($request->password),
+            //     'email_verified' => null,
+            //     'auth_provider' => 'local',
+            //     'status' => 'active',
+            //     'jabatan' => $request->jabatan,
+            // ]);
             \App\Models\User::create([
                 'nama' => $request->nama,
                 'email' => $request->email,
-                'password' => \Illuminate\Support\Facades\Hash::make($request->password),
-                'email_verified' => 0,
+                'password' => Hash::make($request->password),
+                'email_verified' => null, // ✅ FIX
                 'auth_provider' => 'local',
-                'status' => 'active',
+                'status' => 'aktif', // ✅ FIX
                 'jabatan' => $request->jabatan,
             ]);
 
