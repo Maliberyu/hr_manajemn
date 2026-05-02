@@ -119,7 +119,7 @@ class Pegawai extends Model
 
     public function berkas(): HasMany
     {
-        return $this->hasMany(BerkasPegawai::class, 'nik', 'nik');
+        return $this->hasMany(BerkasPegawai::class, 'nik', 'nik')->with('jenis');
     }
 
     public function jadwalBulanan(): HasMany

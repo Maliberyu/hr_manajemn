@@ -14,9 +14,6 @@ class TrainingController extends Controller
 {
     public function __construct()
     {
-        $this->middleware('permission:training.view')->only(['index', 'show', 'sertifikasi']);
-        $this->middleware('permission:training.manage')->only(['create', 'store', 'edit', 'update', 'destroy']);
-        $this->middleware('permission:training.peserta')->only(['storePeserta', 'updateStatusPeserta', 'destroyPeserta']);
     }
 
     // ─── Index semua training ─────────────────────────────────────────────────

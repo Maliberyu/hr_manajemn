@@ -15,9 +15,6 @@ class AbsensiController extends Controller
 {
     public function __construct()
     {
-        $this->middleware('permission:absensi.view')->only(['index', 'show', 'rekap']);
-        $this->middleware('permission:absensi.input')->only(['create', 'store', 'checkIn', 'checkOut']);
-        $this->middleware('permission:absensi.edit')->only(['edit', 'update']);
     }
 
     // ─── Dashboard absensi hari ini ───────────────────────────────────────────
@@ -252,7 +249,6 @@ class AbsensiController extends Controller
 
     public function generateRekap(Request $request)
     {
-        $this->middleware('permission:absensi.rekap');
 
         $bulan = $request->bulan ?? now()->subMonth()->month;
         $tahun = $request->tahun ?? now()->subMonth()->year;
@@ -286,7 +282,6 @@ class AbsensiController extends Controller
 
     public function export(Request $request)
     {
-        $this->middleware('permission:absensi.export');
 
         $bulan = $request->bulan ?? now()->month;
         $tahun = $request->tahun ?? now()->year;
@@ -311,7 +306,6 @@ class AbsensiController extends Controller
             'Pagi'   => '07:00',
             'Siang'  => '14:00',
             'Malam'  => '21:00',
-            default  => '07:00',
         ];
 
         $batas = $batasShift[$namaShift] ?? $batasShift['Pagi'];

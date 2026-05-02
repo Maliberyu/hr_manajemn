@@ -13,8 +13,6 @@ class ShiftController extends Controller
 {
     public function __construct()
     {
-        $this->middleware('permission:shift.view')->only(['index', 'show']);
-        $this->middleware('permission:shift.edit')->only(['edit', 'update', 'copyBulanLalu']);
     }
 
     // ─── Index: jadwal bulan ini per departemen ───────────────────────────────
@@ -89,7 +87,6 @@ class ShiftController extends Controller
 
     public function inputMassal(Request $request)
     {
-        $this->middleware('permission:shift.edit');
 
         $bulan  = (int) $request->bulan;
         $tahun  = (int) $request->tahun;

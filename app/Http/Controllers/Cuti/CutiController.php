@@ -13,9 +13,6 @@ class CutiController extends Controller
 {
     public function __construct()
     {
-        $this->middleware('permission:cuti.view')->only(['index', 'show']);
-        $this->middleware('permission:cuti.create')->only(['create', 'store']);
-        $this->middleware('permission:cuti.approve')->only(['approve', 'tolak']);
     }
 
     // ─── Index ─────────────────────────────────────────────────────────────────

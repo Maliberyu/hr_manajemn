@@ -7,44 +7,22 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class MasterBerkasPegawai extends Model
 {
-    public $timestamps = false;
-
-    protected $table = 'master_berkas_pegawai';
-    protected $primaryKey = 'kode';
-    public $incrementing = false;
-    protected $keyType = 'string';
+    protected $table = 'hr_jenis_berkas';
 
     protected $fillable = [
-        'kode',
-        'kategori',     // enum: Tenaga klinis Dokter Umum, Perawat dan Bidan, Tenaga Non Klinis, dll
-        'nama_berkas',  // Nama dokumen, mis: "Ijazah Terakhir", "STR/SIP", "KTP"
-        'no_urut',
+        'nama',
+        'kategori',
+        'urutan',
     ];
 
     protected $casts = [
-        'no_urut' => 'integer',
+        'urutan' => 'integer',
     ];
-
-    // Daftar kategori yang ada di DB
-    const KATEGORI = [
-        'Tenaga klinis Dokter Umum',
-        'Tenaga klinis Dokter Spesialis',
-        'Tenaga klinis Perawat dan Bidan',
-        'Tenaga klinis Profesi Lain',
-        'Tenaga Non Klinis',
-    ];
-
-    // ─── Scope ─────────────────────────────────────────────────────────────────
-
-    public function scopeKategori($query, string $kategori)
-    {
-        return $query->where('kategori', $kategori)->orderBy('no_urut');
-    }
 
     // ─── Relasi ────────────────────────────────────────────────────────────────
 
-    public function berkasPegawai(): HasMany
+    public function berkas(): HasMany
     {
-        return $this->hasMany(BerkasPegawai::class, 'kode_berkas', 'kode');
+        return $this->hasMany(BerkasPegawai::class, 'jenis_id');
     }
 }

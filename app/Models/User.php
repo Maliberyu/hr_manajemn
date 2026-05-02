@@ -20,7 +20,8 @@ class User extends Authenticatable
         'auth_provider',
         'jabatan',
         'status',
-        'last_login_at'
+        'last_login_at',
+        'last_login_ip',
     ];
 
     protected $hidden = [
@@ -29,7 +30,13 @@ class User extends Authenticatable
     ];
 
     protected $casts = [
-        'email_verified' => 'boolean',
-        'last_login_at' => 'datetime',
+        'email_verified' => 'datetime',
+        'last_login_at'  => 'datetime',
     ];
+
+    // Status values: 'aktif', 'tidak aktif', 'suspend'
+    public function isAktif(): bool
+    {
+        return $this->status === 'aktif';
+    }
 }

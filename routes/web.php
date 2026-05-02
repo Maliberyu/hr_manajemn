@@ -24,22 +24,17 @@ Route::get('/', fn() => redirect()->route('dashboard'));
 // ── LOGIN --------──────────────────────────────────────────────────────────────
 Route::get('/login', [LoginController::class, 'showLogin'])->name('login');
 Route::post('/login', [LoginController::class, 'login']);
-Route::post('/logout', [LoginController::class, 'logout']);
+Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
 
 
 // ── Register --------──────────────────────────────────────────────────────────────
 Route::get('/register', [RegisterController::class, 'showRegister'])->name('register');
 Route::post('/register', [RegisterController::class, 'register'])->name('register.post');
 
-Route::middleware(['auth'])->group(function () {
-    Route::get('/dashboard', function () {
-        return view('dashboard');
-    });
-});
 // ═══════════════════════════════════════════════════════════════════════════════
 // SEMUA ROUTE BUTUH LOGIN
 // ═══════════════════════════════════════════════════════════════════════════════
-Route::middleware(['auth', 'verified'])->group(function () {
+Route::middleware(['auth'])->group(function () {
 
     // ── Dashboard ──────────────────────────────────────────────────────────────
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');

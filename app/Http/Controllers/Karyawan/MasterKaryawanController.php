@@ -14,10 +14,6 @@ class MasterKaryawanController extends Controller
 {
     public function __construct()
     {
-        $this->middleware('permission:karyawan.view')->only(['index','show']);
-        $this->middleware('permission:karyawan.create')->only(['create','store']);
-        $this->middleware('permission:karyawan.edit')->only(['edit','update']);
-        $this->middleware('permission:karyawan.delete')->only(['destroy']);
     }
 
     // ─── Index ─────────────────────────────────────────────────────────────────

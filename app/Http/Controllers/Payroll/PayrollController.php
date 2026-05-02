@@ -16,9 +16,6 @@ class PayrollController extends Controller
 {
     public function __construct()
     {
-        $this->middleware('permission:payroll.view')->only(['index', 'show']);
-        $this->middleware('permission:payroll.proses')->only(['proses', 'simpan']);
-        $this->middleware('permission:payroll.slip')->only(['slip', 'slipPdf']);
     }
 
     // Tarif BPJS (hardcode, bisa dipindah ke config/settings)
@@ -85,7 +82,6 @@ class PayrollController extends Controller
 
     public function slipPdf(Request $request, Pegawai $karyawan)
     {
-        $this->middleware('permission:payroll.slip');
 
         $bulan = (int) ($request->bulan ?? now()->month);
         $tahun = (int) ($request->tahun ?? now()->year);
@@ -102,7 +98,6 @@ class PayrollController extends Controller
 
     public function export(Request $request)
     {
-        $this->middleware('permission:payroll.export');
 
         $bulan = (int) ($request->bulan ?? now()->month);
         $tahun = (int) ($request->tahun ?? now()->year);

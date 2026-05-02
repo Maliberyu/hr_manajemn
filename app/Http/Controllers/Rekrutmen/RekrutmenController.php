@@ -13,9 +13,6 @@ class RekrutmenController extends Controller
 {
     public function __construct()
     {
-        $this->middleware('permission:rekrutmen.view')->only(['index', 'show']);
-        $this->middleware('permission:rekrutmen.manage')->only(['create', 'store', 'edit', 'update', 'destroy']);
-        $this->middleware('permission:rekrutmen.seleksi')->only(['updateStatusPelamar', 'destroyPelamar']);
     }
 
     public function index(Request $request)

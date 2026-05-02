@@ -16,9 +16,6 @@ class KinerjaController extends Controller
 {
     public function __construct()
     {
-        $this->middleware('permission:kinerja.view')->only(['index', 'show', 'grafik']);
-        $this->middleware('permission:kinerja.input')->only(['create', 'storeEvaluasi', 'storePencapaian']);
-        $this->middleware('permission:kinerja.master')->only(['masterEvaluasi', 'masterPencapaian']);
     }
 
     // ─── Dashboard kinerja ────────────────────────────────────────────────────

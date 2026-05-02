@@ -11,21 +11,19 @@ use Illuminate\Support\Facades\Storage;
 
 class BerkasPegawaiController extends Controller
 {
-    public function __construct()
-    {
-        $this->middleware('permission:karyawan.berkas');
-    }
-
     // ─── List berkas milik satu pegawai ───────────────────────────────────────
 
     public function index(Pegawai $karyawan)
     {
-        $berkas       = $karyawan->berkas()->with('masterBerkas')->get()
-                            ->groupBy('masterBerkas.kategori');
-        $masterBerkas = MasterBerkasPegawai::orderBy('no_urut')->get()
-                            ->groupBy('kategori');
+        $berkas  = BerkasPegawai::where('nik', $karyawan->nik)
+                      ->with('jenis')
+                      ->orderByDesc('tgl_upload')
+                      ->get();
 
-        return view('karyawan.berkas.index', compact('karyawan', 'berkas', 'masterBerkas'));
+        // Nama-nama jenis yang sudah ada untuk autocomplete
+        $jenisList = MasterBerkasPegawai::orderBy('nama')->pluck('nama');
+
+        return view('karyawan.berkas.index', compact('karyawan', 'berkas', 'jenisList'));
     }
 
     // ─── Upload berkas baru ────────────────────────────────────────────────────
@@ -33,37 +31,51 @@ class BerkasPegawaiController extends Controller
     public function store(Request $request, Pegawai $karyawan)
     {
         $request->validate([
-            'kode_berkas' => 'required|exists:master_berkas_pegawai,kode',
-            'file'        => 'required|file|mimes:pdf,jpg,jpeg,png|max:5120', // maks 5 MB
+            'nama_dokumen' => 'required|string|max:100',
+            'file'         => 'required|file|mimes:pdf,jpg,jpeg,png|max:5120',
+            'keterangan'   => 'nullable|string|max:255',
         ]);
 
-        $master    = MasterBerkasPegawai::findOrFail($request->kode_berkas);
-        $ext       = $request->file('file')->getClientOriginalExtension();
-        $filename  = "pegawai/berkas/{$karyawan->nik}/{$request->kode_berkas}_{$karyawan->nik}.{$ext}";
+        // Auto-create atau reuse jenis berkas berdasarkan nama
+        $jenis = MasterBerkasPegawai::firstOrCreate(
+            ['nama' => trim($request->nama_dokumen)],
+            [
+                'kategori' => 'Umum',
+                'urutan'   => (MasterBerkasPegawai::max('urutan') ?? 0) + 1,
+            ]
+        );
 
-        // Hapus file lama jika ada (replace)
+        $file     = $request->file('file');
+        $ext      = strtolower($file->getClientOriginalExtension());
+        $namaFile = $file->getClientOriginalName();
+        $slug     = preg_replace('/[^A-Za-z0-9]+/', '_', $request->nama_dokumen);
+        $path     = "hr_berkas/{$karyawan->nik}/{$slug}_{$karyawan->nik}_{$jenis->id}.{$ext}";
+
+        // Hapus file lama jika dokumen yang sama sudah ada
         $existing = BerkasPegawai::where('nik', $karyawan->nik)
-                                  ->where('kode_berkas', $request->kode_berkas)
+                                  ->where('jenis_id', $jenis->id)
                                   ->first();
-        if ($existing && Storage::disk('public')->exists($existing->berkas)) {
-            Storage::disk('public')->delete($existing->berkas);
+        if ($existing) {
+            Storage::disk('public')->delete($existing->path);
             $existing->delete();
         }
 
         Storage::disk('public')->putFileAs(
-            "pegawai/berkas/{$karyawan->nik}",
-            $request->file('file'),
-            "{$request->kode_berkas}_{$karyawan->nik}.{$ext}"
+            "hr_berkas/{$karyawan->nik}",
+            $file,
+            basename($path)
         );
 
         BerkasPegawai::create([
-            'nik'         => $karyawan->nik,
-            'kode_berkas' => $request->kode_berkas,
-            'tgl_uploud'  => today(),
-            'berkas'      => $filename,
+            'jenis_id'   => $jenis->id,
+            'nik'        => $karyawan->nik,
+            'nama_file'  => $namaFile,
+            'path'       => $path,
+            'tgl_upload' => today(),
+            'keterangan' => $request->keterangan,
         ]);
 
-        return back()->with('success', "Berkas {$master->nama_berkas} berhasil diupload.");
+        return back()->with('success', "Berkas \"{$jenis->nama}\" berhasil diupload.");
     }
 
     // ─── Download / preview berkas ────────────────────────────────────────────
@@ -71,12 +83,9 @@ class BerkasPegawaiController extends Controller
     public function download(Pegawai $karyawan, BerkasPegawai $berkas)
     {
         abort_if($berkas->nik !== $karyawan->nik, 403);
-        abort_unless(Storage::disk('public')->exists($berkas->berkas), 404, 'File tidak ditemukan.');
+        abort_unless(Storage::disk('public')->exists($berkas->path), 404, 'File tidak ditemukan.');
 
-        return Storage::disk('public')->download(
-            $berkas->berkas,
-            $berkas->masterBerkas->nama_berkas . '.' . $berkas->ekstensi
-        );
+        return Storage::disk('public')->download($berkas->path, $berkas->nama_file);
     }
 
     // ─── Hapus berkas ─────────────────────────────────────────────────────────
@@ -84,11 +93,7 @@ class BerkasPegawaiController extends Controller
     public function destroy(Pegawai $karyawan, BerkasPegawai $berkas)
     {
         abort_if($berkas->nik !== $karyawan->nik, 403);
-
-        if (Storage::disk('public')->exists($berkas->berkas)) {
-            Storage::disk('public')->delete($berkas->berkas);
-        }
-
+        Storage::disk('public')->delete($berkas->path);
         $berkas->delete();
 
         return back()->with('success', 'Berkas berhasil dihapus.');

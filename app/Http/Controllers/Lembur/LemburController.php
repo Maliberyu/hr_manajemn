@@ -14,10 +14,6 @@ class LemburController extends Controller
 {
     public function __construct()
     {
-        $this->middleware('permission:lembur.view')->only(['index', 'show']);
-        $this->middleware('permission:lembur.create')->only(['create', 'store']);
-        $this->middleware('permission:lembur.approve')->only(['approve', 'tolak']);
-        $this->middleware('permission:lembur.setting')->only(['setting', 'updateSetting']);
     }
 
     // ─── Index ─────────────────────────────────────────────────────────────────

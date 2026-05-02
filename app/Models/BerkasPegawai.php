@@ -8,40 +8,33 @@ use Illuminate\Support\Facades\Storage;
 
 class BerkasPegawai extends Model
 {
-    public $timestamps = false;
-
-    protected $table = 'berkas_pegawai';
-
-    // Tabel ini composite PK (tidak ada kolom id tunggal)
-    // Eloquent tidak pakai $primaryKey untuk composite — biarkan default
-    public $incrementing = false;
+    protected $table = 'hr_berkas';
 
     protected $fillable = [
+        'jenis_id',
         'nik',
-        'tgl_uploud',
-        'kode_berkas',
-        'berkas',           // path relatif di storage, mis: berkas_pegawai/KTP_12345.pdf
+        'nama_file',
+        'path',
+        'tgl_upload',
+        'keterangan',
     ];
 
     protected $casts = [
-        'tgl_uploud' => 'date',
+        'tgl_upload' => 'date',
     ];
 
     // ─── Accessors ─────────────────────────────────────────────────────────────
 
-    /** URL download berkas */
-    public function getUrlBerkasAttribute(): string
+    public function getUrlAttribute(): string
     {
-        return Storage::url($this->berkas);
+        return Storage::url($this->path);
     }
 
-    /** Ekstensi file (pdf, jpg, dll) */
     public function getEkstensiAttribute(): string
     {
-        return strtolower(pathinfo($this->berkas, PATHINFO_EXTENSION));
+        return strtolower(pathinfo($this->path, PATHINFO_EXTENSION));
     }
 
-    /** Apakah file berupa PDF */
     public function getIsPdfAttribute(): bool
     {
         return $this->ekstensi === 'pdf';
@@ -54,8 +47,8 @@ class BerkasPegawai extends Model
         return $this->belongsTo(Pegawai::class, 'nik', 'nik');
     }
 
-    public function masterBerkas(): BelongsTo
+    public function jenis(): BelongsTo
     {
-        return $this->belongsTo(MasterBerkasPegawai::class, 'kode_berkas', 'kode');
+        return $this->belongsTo(MasterBerkasPegawai::class, 'jenis_id');
     }
 }

@@ -31,9 +31,9 @@ class LoginController extends Controller
         }
 
 
-        if ($user->status !== 'active') {
+        if ($user->status !== 'aktif') {
             return back()->withErrors([
-                'email' => 'Akun tidak aktif'
+                'email' => 'Akun tidak aktif. Hubungi administrator.'
             ]);
         }
 
