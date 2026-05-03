@@ -7,35 +7,37 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class PengajuanCuti extends Model
 {
-    public $timestamps = false;
-
-    protected $table = 'pengajuan_cuti';
-    protected $primaryKey = 'no_pengajuan';
-    public $incrementing = false;
-    protected $keyType = 'string';
+    protected $table      = 'hr_pengajuan_cuti';
+    protected $primaryKey = 'id';
+    public $incrementing  = true;
 
     protected $fillable = [
-        'no_pengajuan',     // format: CT/YYYYMM/XXX
-        'tanggal',          // tanggal pengajuan dibuat
-        'tanggal_awal',     // mulai cuti
-        'tanggal_akhir',    // selesai cuti
-        'nik',              // pegawai yang mengajukan
-        'urgensi',          // jenis cuti
-        'alamat',           // alamat selama cuti
-        'jumlah',           // jumlah hari cuti
-        'kepentingan',      // alasan/keterangan
-        'nik_pj',           // nik penanggung jawab selama cuti
-        'status',           // Proses Pengajuan | Disetujui | Ditolak
+        'no_pengajuan',
+        'tanggal',
+        'tanggal_awal',
+        'tanggal_akhir',
+        'nik',
+        'urgensi',
+        'alamat',
+        'jumlah',
+        'kepentingan',
+        'nik_pj',
+        'catatan_atasan',
+        'approved_atasan_at',
+        'catatan_hrd',
+        'approved_hrd_at',
+        'status',
     ];
 
     protected $casts = [
-        'tanggal'       => 'date',
-        'tanggal_awal'  => 'date',
-        'tanggal_akhir' => 'date',
-        'jumlah'        => 'integer',
+        'tanggal'            => 'date',
+        'tanggal_awal'       => 'date',
+        'tanggal_akhir'      => 'date',
+        'jumlah'             => 'integer',
+        'approved_atasan_at' => 'datetime',
+        'approved_hrd_at'    => 'datetime',
     ];
 
-    // Jenis cuti sesuai ENUM di DB
     const JENIS_CUTI = [
         'Tahunan',
         'Besar',
@@ -46,16 +48,30 @@ class PengajuanCuti extends Model
     ];
 
     const STATUS = [
-        'Proses Pengajuan',
+        'Menunggu Atasan',
+        'Menunggu HRD',
         'Disetujui',
-        'Ditolak',
+        'Ditolak Atasan',
+        'Ditolak HRD',
     ];
+
+    const HAK_CUTI_TAHUNAN = 12;
 
     // ─── Scopes ────────────────────────────────────────────────────────────────
 
     public function scopeMenungguApproval($query)
     {
-        return $query->where('status', 'Proses Pengajuan');
+        return $query->whereIn('status', ['Menunggu Atasan', 'Menunggu HRD']);
+    }
+
+    public function scopeMenungguAtasan($query)
+    {
+        return $query->where('status', 'Menunggu Atasan');
+    }
+
+    public function scopeMenungguHrd($query)
+    {
+        return $query->where('status', 'Menunggu HRD');
     }
 
     public function scopeDisetujui($query)
@@ -68,21 +84,40 @@ class PengajuanCuti extends Model
         return $query->whereYear('tanggal', now()->year);
     }
 
+    // ─── Helpers ───────────────────────────────────────────────────────────────
+
+    public function bisaApproveAtasan(): bool
+    {
+        return $this->status === 'Menunggu Atasan';
+    }
+
+    public function bisaApproveHrd(): bool
+    {
+        return $this->status === 'Menunggu HRD';
+    }
+
+    public function ditolak(): bool
+    {
+        return str_starts_with($this->status, 'Ditolak');
+    }
+
     // ─── Accessors ─────────────────────────────────────────────────────────────
 
-    public function getStatusBadgeAttribute(): string
+    public function getStatusColorAttribute(): string
     {
         return match($this->status) {
-            'Disetujui'        => 'success',
-            'Ditolak'          => 'danger',
-            'Proses Pengajuan' => 'warning',
-            default            => 'secondary',
+            'Menunggu Atasan' => 'yellow',
+            'Menunggu HRD'    => 'blue',
+            'Disetujui'       => 'green',
+            'Ditolak Atasan',
+            'Ditolak HRD'     => 'red',
+            default           => 'gray',
         };
     }
 
     public function getDurasiAttribute(): string
     {
-        return $this->jumlah . ' hari';
+        return $this->jumlah . ' hari kerja';
     }
 
     // ─── Relasi ────────────────────────────────────────────────────────────────

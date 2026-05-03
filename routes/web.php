@@ -15,6 +15,7 @@ use App\Http\Controllers\Rekrutmen\RekrutmenController;
 use App\Http\Controllers\Training\TrainingController;
 use App\Http\Controllers\Login\LoginController;
 use App\Http\Controllers\Register\RegisterController;
+use App\Http\Controllers\Pengaturan\UserController;
 
 // ─── Auth (Breeze) ─────────────────────────────────────────────────────────────
 // require __DIR__ . '/auth.php'; dihapus karena kita custom login/logout sendiri
@@ -44,6 +45,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/ess', [DashboardController::class, 'ess'])->name('ess.dashboard');
     Route::post('/ess/checkin',  [AbsensiController::class, 'checkIn'])->name('ess.checkin');
     Route::post('/ess/checkout', [AbsensiController::class, 'checkOut'])->name('ess.checkout');
+    Route::post('/ess/cuti',     [DashboardController::class, 'essStoreCuti'])->name('ess.cuti.store');
 
     // ═══════════════════════════════════════════════════════════════════════════
     // MODUL: MASTER KARYAWAN
@@ -96,7 +98,7 @@ Route::middleware(['auth'])->group(function () {
     });
 
     // ═══════════════════════════════════════════════════════════════════════════
-    // MODUL: CUTI
+    // MODUL: CUTI  (2-level approval: Atasan → HRD)
     // ═══════════════════════════════════════════════════════════════════════════
     Route::prefix('cuti')->name('cuti.')->group(function () {
         Route::get('/',                              [CutiController::class, 'index'])->name('index');
@@ -104,8 +106,10 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/',                             [CutiController::class, 'store'])->name('store');
         Route::get('/saldo',                         [CutiController::class, 'saldo'])->name('saldo');
         Route::get('/{cuti}',                        [CutiController::class, 'show'])->name('show');
-        Route::post('/{cuti}/approve',               [CutiController::class, 'approve'])->name('approve');
-        Route::post('/{cuti}/tolak',                 [CutiController::class, 'tolak'])->name('tolak');
+        Route::post('/{cuti}/approve-atasan',        [CutiController::class, 'approveAtasan'])->name('approve.atasan');
+        Route::post('/{cuti}/tolak-atasan',          [CutiController::class, 'tolakAtasan'])->name('tolak.atasan');
+        Route::post('/{cuti}/approve-hrd',           [CutiController::class, 'approveHrd'])->name('approve.hrd');
+        Route::post('/{cuti}/tolak-hrd',             [CutiController::class, 'tolakHrd'])->name('tolak.hrd');
         Route::get('/{cuti}/cetak',                  [CutiController::class, 'cetak'])->name('cetak');
     });
 
@@ -202,5 +206,18 @@ Route::middleware(['auth'])->group(function () {
         Route::put('/{training}/peserta/{peserta}/status',                        [TrainingController::class, 'updateStatusPeserta'])->name('peserta.status');
         Route::delete('/{training}/peserta/{peserta}',                            [TrainingController::class, 'destroyPeserta'])->name('peserta.destroy');
         Route::get('/peserta/{peserta}/sertifikat',                               [TrainingController::class, 'downloadSertifikat'])->name('peserta.sertifikat');
+    });
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // PENGATURAN: MANAJEMEN USER
+    // ═══════════════════════════════════════════════════════════════════════════
+    Route::prefix('pengaturan/users')->name('pengaturan.users.')->group(function () {
+        Route::get('/',                            [UserController::class, 'index'])->name('index');
+        Route::get('/buat',                        [UserController::class, 'create'])->name('create');
+        Route::post('/',                           [UserController::class, 'store'])->name('store');
+        Route::get('/{user}/edit',                 [UserController::class, 'edit'])->name('edit');
+        Route::put('/{user}',                      [UserController::class, 'update'])->name('update');
+        Route::post('/{user}/reset-password',      [UserController::class, 'resetPassword'])->name('reset-password');
+        Route::delete('/{user}',                   [UserController::class, 'destroy'])->name('destroy');
     });
 });

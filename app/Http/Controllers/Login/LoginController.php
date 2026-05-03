@@ -15,53 +15,46 @@ class LoginController extends Controller
 
     public function login(Request $request)
     {
-
-        $credentials = $request->validate([
-            'email' => ['required', 'email'],
-            'password' => ['required']
+        $request->validate([
+            'email'    => ['required', 'email'],
+            'password' => ['required'],
         ]);
 
         $user = \App\Models\User::where('email', $request->email)->first();
 
-
-        if (!$user) {
-            return back()->withErrors([
-                'email' => 'User tidak ditemukan'
-            ]);
+        if (! $user) {
+            return back()->withErrors(['email' => 'User tidak ditemukan.'])->withInput();
         }
-
 
         if ($user->status !== 'aktif') {
-            return back()->withErrors([
-                'email' => 'Akun tidak aktif. Hubungi administrator.'
-            ]);
+            return back()->withErrors(['email' => 'Akun tidak aktif. Hubungi administrator.'])->withInput();
         }
 
-
-        if (Auth::attempt($credentials)) {
+        if (Auth::attempt($request->only('email', 'password'))) {
             $request->session()->regenerate();
-
 
             $user->update([
                 'last_login_at' => now(),
-                'last_login_ip' => $request->ip()
+                'last_login_ip' => $request->ip(),
             ]);
 
-            return redirect()->intended('/dashboard');
+            // Redirect berdasarkan role
+            $redirect = match($user->role ?? 'karyawan') {
+                'karyawan' => route('ess.dashboard'),
+                default    => route('dashboard'),
+            };
+
+            return redirect()->intended($redirect);
         }
 
-        return back()->withErrors([
-            'email' => 'Email atau password salah'
-        ]);
+        return back()->withErrors(['email' => 'Email atau password salah.'])->withInput();
     }
 
     public function logout(Request $request)
     {
         Auth::logout();
-
         $request->session()->invalidate();
         $request->session()->regenerateToken();
-
         return redirect('/login');
     }
 }

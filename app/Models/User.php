@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class User extends Authenticatable
 {
@@ -13,12 +14,14 @@ class User extends Authenticatable
 
     protected $fillable = [
         'nama',
+        'nik',
         'email',
         'password',
         'email_verified',
         'google_id',
         'auth_provider',
         'jabatan',
+        'role',
         'status',
         'last_login_at',
         'last_login_ip',
@@ -34,19 +37,47 @@ class User extends Authenticatable
         'last_login_at'  => 'datetime',
     ];
 
+    const ROLES = [
+        'karyawan' => 'Karyawan',
+        'atasan'   => 'Atasan Langsung',
+        'hrd'      => 'HRD',
+        'admin'    => 'Admin',
+    ];
+
+    // ─── Relasi ───────────────────────────────────────────────────────────────
+
+    public function pegawai(): BelongsTo
+    {
+        return $this->belongsTo(Pegawai::class, 'nik', 'nik');
+    }
+
+    // ─── Helpers ──────────────────────────────────────────────────────────────
+
     public function isAktif(): bool
     {
         return $this->status === 'aktif';
     }
 
-    /** Stub untuk kompatibilitas sebelum Spatie roles diinstall */
+    public function isAdmin(): bool
+    {
+        return in_array($this->role ?? 'karyawan', ['admin', 'hrd']);
+    }
+
+    public function getRoleLabelAttribute(): string
+    {
+        return self::ROLES[$this->role ?? 'karyawan'] ?? ucfirst($this->role ?? '-');
+    }
+
+    // ─── Role checks ──────────────────────────────────────────────────────────
+
     public function hasRole($roles): bool
     {
-        return false;
+        $roles = is_array($roles) ? $roles : [$roles];
+        return in_array($this->role ?? 'karyawan', $roles);
     }
 
     public function hasAnyRole($roles): bool
     {
-        return false;
+        return $this->hasRole(is_array($roles) ? $roles : [$roles]);
     }
 }
