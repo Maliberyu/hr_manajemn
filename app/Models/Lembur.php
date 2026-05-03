@@ -4,11 +4,9 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Carbon\Carbon;
 
 class Lembur extends Model
 {
-    // Tabel BARU — perlu migration
     protected $table = 'lembur';
 
     protected $fillable = [
@@ -16,74 +14,105 @@ class Lembur extends Model
         'tanggal',
         'jam_mulai',
         'jam_selesai',
-        'durasi_jam',           // dihitung otomatis
-        'jenis',                // HB (hari biasa) | HR (hari raya/libur)
+        'durasi_jam',
+        'jenis',                  // HB (hari biasa) | HR (hari raya/libur)
         'keterangan',
-        'status',               // draft | diajukan | disetujui | ditolak
-        'approved_by',          // user_id yang approve
-        'approved_at',
-        'catatan_approval',
-        'nominal',              // dihitung dari durasi × tarif lembur
+        'status',
+        'nominal',
+        // Approval level 1 — Atasan
+        'catatan_atasan',
+        'approved_atasan_by',
+        'approved_atasan_at',
+        // Approval level 2 — HRD
+        'catatan_hrd',
+        'approved_hrd_by',
+        'approved_hrd_at',
     ];
 
     protected $casts = [
-        'tanggal'     => 'date',
-        'jam_mulai'   => 'datetime',
-        'jam_selesai' => 'datetime',
-        'durasi_jam'  => 'float',
-        'approved_at' => 'datetime',
-        'nominal'     => 'double',
+        'tanggal'            => 'date',
+        'durasi_jam'         => 'float',
+        'nominal'            => 'double',
+        'approved_atasan_at' => 'datetime',
+        'approved_hrd_at'    => 'datetime',
     ];
 
-    const STATUS = ['draft', 'diajukan', 'disetujui', 'ditolak'];
-    const JENIS  = ['HB', 'HR'];
+    const STATUS = [
+        'Menunggu Atasan',
+        'Menunggu HRD',
+        'Disetujui',
+        'Ditolak Atasan',
+        'Ditolak HRD',
+    ];
+
+    const JENIS = ['HB' => 'Hari Biasa', 'HR' => 'Hari Raya/Libur'];
 
     // ─── Scopes ────────────────────────────────────────────────────────────────
 
+    public function scopeMenungguAtasan($query)
+    {
+        return $query->where('status', 'Menunggu Atasan');
+    }
+
+    public function scopeMenungguHrd($query)
+    {
+        return $query->where('status', 'Menunggu HRD');
+    }
+
     public function scopeMenungguApproval($query)
     {
-        return $query->where('status', 'diajukan');
+        return $query->whereIn('status', ['Menunggu Atasan', 'Menunggu HRD']);
+    }
+
+    public function scopeDisetujui($query)
+    {
+        return $query->where('status', 'Disetujui');
     }
 
     public function scopeBulan($query, int $tahun, int $bulan)
     {
-        return $query->whereYear('tanggal', $tahun)
-                     ->whereMonth('tanggal', $bulan);
+        return $query->whereYear('tanggal', $tahun)->whereMonth('tanggal', $bulan);
+    }
+
+    // ─── Permission helpers ────────────────────────────────────────────────────
+
+    public function bisaApproveAtasan(): bool
+    {
+        return $this->status === 'Menunggu Atasan'
+            && auth()->user()->hasRole(['atasan', 'hrd', 'admin']);
+    }
+
+    public function bisaApproveHrd(): bool
+    {
+        return $this->status === 'Menunggu HRD'
+            && auth()->user()->hasRole(['hrd', 'admin']);
+    }
+
+    public function ditolak(): bool
+    {
+        return in_array($this->status, ['Ditolak Atasan', 'Ditolak HRD']);
     }
 
     // ─── Accessors ─────────────────────────────────────────────────────────────
 
-    public function getStatusBadgeAttribute(): string
+    public function getStatusColorAttribute(): string
     {
         return match($this->status) {
-            'disetujui' => 'success',
-            'ditolak'   => 'danger',
-            'diajukan'  => 'warning',
-            'draft'     => 'secondary',
-            default     => 'secondary',
+            'Menunggu Atasan' => 'yellow',
+            'Menunggu HRD'    => 'blue',
+            'Disetujui'       => 'green',
+            'Ditolak Atasan',
+            'Ditolak HRD'     => 'red',
+            default           => 'gray',
         };
     }
 
     public function getDurasiLabelAttribute(): string
     {
-        $jam  = intdiv((int)$this->durasi_jam, 1);
-        $mnt  = (int)(($this->durasi_jam - $jam) * 60);
-        return "{$jam}j " . ($mnt > 0 ? "{$mnt}m" : "");
-    }
-
-    // ─── Helper kalkulasi ──────────────────────────────────────────────────────
-
-    /**
-     * Hitung nominal lembur berdasarkan jenis dan durasi.
-     * Tarif diambil dari tabel set_lemburhb / set_lemburhr.
-     */
-    public function hitungNominal(): float
-    {
-        $tarif = $this->jenis === 'HR'
-            ? SetLemburHR::tarifAktif()
-            : SetLemburHB::tarifAktif();
-
-        return $this->durasi_jam * $tarif;
+        $total = (float) $this->durasi_jam;
+        $jam   = (int) $total;
+        $mnt   = (int)(($total - $jam) * 60);
+        return "{$jam}j" . ($mnt > 0 ? " {$mnt}m" : "");
     }
 
     // ─── Relasi ────────────────────────────────────────────────────────────────
@@ -93,8 +122,13 @@ class Lembur extends Model
         return $this->belongsTo(Pegawai::class, 'pegawai_id', 'id');
     }
 
-    public function approver(): BelongsTo
+    public function approverAtasan(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'approved_by', 'id');
+        return $this->belongsTo(User::class, 'approved_atasan_by', 'id');
+    }
+
+    public function approverHrd(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'approved_hrd_by', 'id');
     }
 }

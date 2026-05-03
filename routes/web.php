@@ -165,8 +165,10 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/setting',                       [LemburController::class, 'setting'])->name('setting');
         Route::post('/setting',                      [LemburController::class, 'updateSetting'])->name('setting.update');
         Route::get('/{lembur}',                      [LemburController::class, 'show'])->name('show');
-        Route::post('/{lembur}/approve',             [LemburController::class, 'approve'])->name('approve');
-        Route::post('/{lembur}/tolak',               [LemburController::class, 'tolak'])->name('tolak');
+        Route::post('/{lembur}/approve-atasan',      [LemburController::class, 'approveAtasan'])->name('approve.atasan');
+        Route::post('/{lembur}/tolak-atasan',        [LemburController::class, 'tolakAtasan'])->name('tolak.atasan');
+        Route::post('/{lembur}/approve-hrd',         [LemburController::class, 'approveHrd'])->name('approve.hrd');
+        Route::post('/{lembur}/tolak-hrd',           [LemburController::class, 'tolakHrd'])->name('tolak.hrd');
     });
 
     // ═══════════════════════════════════════════════════════════════════════════
