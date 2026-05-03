@@ -80,7 +80,10 @@ class DashboardController extends Controller
     public function ess()
     {
         $pegawai = auth()->user()->pegawai;
-        abort_unless($pegawai, 403);
+
+        if (!$pegawai) {
+            return view('ess.not_linked');
+        }
 
         $absensiHariIni = $this->safe(
             fn() => Absensi::where('pegawai_id', $pegawai->id)->whereDate('tanggal', today())->first()

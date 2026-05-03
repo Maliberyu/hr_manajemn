@@ -26,7 +26,7 @@ class UserController extends Controller
 
     public function create()
     {
-        $pegawai = Pegawai::aktif()->orderBy('nama')
+        $pegawai = Pegawai::orderBy('nama')
             ->get(['nik', 'nama', 'jbtn']);
 
         return view('pengaturan.users.create', compact('pegawai'));
@@ -57,7 +57,7 @@ class UserController extends Controller
     public function edit(User $user)
     {
         $user->load('pegawai');
-        $pegawai = Pegawai::aktif()->orderBy('nama')
+        $pegawai = Pegawai::orderBy('nama')
             ->get(['nik', 'nama', 'jbtn']);
 
         return view('pengaturan.users.edit', compact('user', 'pegawai'));
