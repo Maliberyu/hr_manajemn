@@ -11,6 +11,8 @@ use App\Http\Controllers\Shift\ShiftController;
 use App\Http\Controllers\Kinerja\KinerjaController;
 use App\Http\Controllers\Payroll\PayrollController;
 use App\Http\Controllers\Lembur\LemburController;
+use App\Http\Controllers\Kinerja\PenilaianPrestasiController;
+use App\Http\Controllers\Kinerja\Penilaian360Controller;
 use App\Http\Controllers\Rekrutmen\RekrutmenController;
 use App\Http\Controllers\Training\TrainingController;
 use App\Http\Controllers\Login\LoginController;
@@ -129,18 +131,43 @@ Route::middleware(['auth'])->group(function () {
     // MODUL: PENILAIAN KINERJA
     // ═══════════════════════════════════════════════════════════════════════════
     Route::prefix('kinerja')->name('kinerja.')->group(function () {
-        Route::get('/',                              [KinerjaController::class, 'index'])->name('index');
-        Route::get('/input',                         [KinerjaController::class, 'create'])->name('create');
-        Route::post('/evaluasi',                     [KinerjaController::class, 'storeEvaluasi'])->name('evaluasi.store');
-        Route::post('/pencapaian',                   [KinerjaController::class, 'storePencapaian'])->name('pencapaian.store');
-        Route::get('/laporan',                       [KinerjaController::class, 'laporan'])->name('laporan');
-        Route::get('/karyawan/{karyawan}',           [KinerjaController::class, 'show'])->name('show');
-        Route::get('/karyawan/{karyawan}/grafik',    [KinerjaController::class, 'grafik'])->name('grafik');
+        Route::get('/',  [KinerjaController::class, 'index'])->name('index');
 
-        // Master indikator
-        Route::get('/master/evaluasi',               [KinerjaController::class, 'masterEvaluasi'])->name('master.evaluasi');
-        Route::post('/master/evaluasi',              [KinerjaController::class, 'storeMasterEvaluasi'])->name('master.evaluasi.store');
-        Route::delete('/master/evaluasi/{evaluasi}', [KinerjaController::class, 'destroyMasterEvaluasi'])->name('master.evaluasi.destroy');
+        // Master data
+        Route::get('/master',                                    [KinerjaController::class, 'master'])->name('master');
+        Route::post('/master/kriteria',                          [KinerjaController::class, 'storeKriteria'])->name('master.kriteria.store');
+        Route::post('/master/kriteria/bobot',                    [KinerjaController::class, 'updateBobot'])->name('master.kriteria.bobot');
+        Route::patch('/master/kriteria/{kriteria}/toggle',       [KinerjaController::class, 'toggleKriteria'])->name('master.kriteria.toggle');
+        Route::delete('/master/kriteria/{kriteria}',             [KinerjaController::class, 'destroyKriteria'])->name('master.kriteria.destroy');
+        Route::post('/master/sub-indikator',                     [KinerjaController::class, 'storeSubIndikator'])->name('master.sub.store');
+        Route::delete('/master/sub-indikator/{sub}',             [KinerjaController::class, 'destroySubIndikator'])->name('master.sub.destroy');
+        Route::post('/master/aspek',                             [KinerjaController::class, 'storeAspek'])->name('master.aspek.store');
+        Route::delete('/master/aspek/{aspek}',                   [KinerjaController::class, 'destroyAspek'])->name('master.aspek.destroy');
+        Route::post('/master/bobot-rater',                       [KinerjaController::class, 'updateBobotRater'])->name('master.bobot.rater');
+
+        // Penilaian Prestasi Kerja
+        Route::prefix('prestasi')->name('prestasi.')->group(function () {
+            Route::get('/',                                      [PenilaianPrestasiController::class, 'index'])->name('index');
+            Route::get('/buat',                                  [PenilaianPrestasiController::class, 'create'])->name('create');
+            Route::post('/',                                     [PenilaianPrestasiController::class, 'store'])->name('store');
+            Route::get('/{penilaian}',                           [PenilaianPrestasiController::class, 'show'])->name('show');
+            Route::get('/{penilaian}/edit',                      [PenilaianPrestasiController::class, 'edit'])->name('edit');
+            Route::put('/{penilaian}',                           [PenilaianPrestasiController::class, 'update'])->name('update');
+            Route::post('/{penilaian}/finalize',                 [PenilaianPrestasiController::class, 'finalize'])->name('finalize');
+            Route::get('/{penilaian}/pdf',                       [PenilaianPrestasiController::class, 'pdf'])->name('pdf');
+        });
+
+        // Penilaian 360 Derajat
+        Route::prefix('360')->name('360.')->group(function () {
+            Route::get('/',                                      [Penilaian360Controller::class, 'index'])->name('index');
+            Route::get('/buat',                                  [Penilaian360Controller::class, 'create'])->name('create');
+            Route::post('/',                                     [Penilaian360Controller::class, 'store'])->name('store');
+            Route::get('/{sesi}',                                [Penilaian360Controller::class, 'show'])->name('show');
+            Route::get('/{sesi}/isi',                            [Penilaian360Controller::class, 'form'])->name('form');
+            Route::post('/{sesi}/isi',                           [Penilaian360Controller::class, 'submitForm'])->name('form.submit');
+            Route::get('/{sesi}/rekap',                          [Penilaian360Controller::class, 'rekap'])->name('rekap');
+            Route::post('/{sesi}/tutup',                         [Penilaian360Controller::class, 'tutup'])->name('tutup');
+        });
     });
 
     // ═══════════════════════════════════════════════════════════════════════════

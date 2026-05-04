@@ -31,9 +31,13 @@
     <div class="flex flex-col sm:flex-row gap-5 items-start">
         {{-- Foto --}}
         <div class="flex-shrink-0">
-            <img src="{{ $karyawan->foto_url }}"
+            <img src="{{ $karyawan->foto_url 
+        ? asset($karyawan->foto_url) 
+        : asset('images/avatar-default.png') }}"
+             class="w-24 h-24 rounded-2xl object-cover border-4 border-gray-100 shadow">
+            <!-- <img src="{{ $karyawan->foto_url }}"
                  class="w-24 h-24 rounded-2xl object-cover border-4 border-gray-100 shadow"
-                 onerror="this.src='{{ asset('images/avatar-default.png') }}'">
+                 onerror="this.src='{{ asset('images/avatar-default.png') }}'"> -->
         </div>
 
         {{-- Info --}}
