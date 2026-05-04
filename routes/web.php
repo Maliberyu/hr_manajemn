@@ -147,11 +147,28 @@ Route::middleware(['auth'])->group(function () {
     // MODUL: PAYROLL
     // ═══════════════════════════════════════════════════════════════════════════
     Route::prefix('payroll')->name('payroll.')->group(function () {
-        Route::get('/',                              [PayrollController::class, 'index'])->name('index');
-        Route::get('/proses',                        [PayrollController::class, 'proses'])->name('proses');
-        Route::get('/export',                        [PayrollController::class, 'export'])->name('export');
-        Route::get('/karyawan/{karyawan}',           [PayrollController::class, 'show'])->name('show');
-        Route::get('/karyawan/{karyawan}/slip',      [PayrollController::class, 'slipPdf'])->name('slip');
+        Route::get('/',                                    [PayrollController::class, 'index'])->name('index');
+        Route::get('/export',                              [PayrollController::class, 'export'])->name('export');
+        Route::post('/generate',                           [PayrollController::class, 'generateSlips'])->name('generate');
+
+        // Master data
+        Route::get('/master',                              [PayrollController::class, 'master'])->name('master');
+        Route::post('/master/umk',                         [PayrollController::class, 'storeUmk'])->name('master.umk.store');
+        Route::delete('/master/umk/{umk}',                 [PayrollController::class, 'destroyUmk'])->name('master.umk.destroy');
+        Route::post('/master/gaji',                        [PayrollController::class, 'storeMasterGaji'])->name('master.gaji.store');
+        Route::delete('/master/gaji/{masterGaji}',         [PayrollController::class, 'destroyMasterGaji'])->name('master.gaji.destroy');
+        Route::post('/master/komponen',                    [PayrollController::class, 'storeKomponen'])->name('master.komponen.store');
+        Route::patch('/master/komponen/{komponen}/toggle', [PayrollController::class, 'toggleKomponen'])->name('master.komponen.toggle');
+        Route::delete('/master/komponen/{komponen}',       [PayrollController::class, 'destroyKomponen'])->name('master.komponen.destroy');
+        Route::post('/master/config',                      [PayrollController::class, 'updateConfig'])->name('master.config.update');
+        Route::post('/master/pegawai',                     [PayrollController::class, 'savePegawaiPayroll'])->name('master.pegawai.save');
+
+        // Slip
+        Route::get('/slip/{slip}',                         [PayrollController::class, 'showSlip'])->name('slip.show');
+        Route::put('/slip/{slip}',                         [PayrollController::class, 'updateSlip'])->name('slip.update');
+        Route::post('/slip/{slip}/finalize',               [PayrollController::class, 'finalizeSlip'])->name('slip.finalize');
+        Route::post('/slip/{slip}/unfinalize',             [PayrollController::class, 'unFinalizeSlip'])->name('slip.unfinalize');
+        Route::get('/slip/{slip}/pdf',                     [PayrollController::class, 'slipPdf'])->name('slip.pdf');
     });
 
     // ═══════════════════════════════════════════════════════════════════════════

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Storage;
 
@@ -166,6 +167,16 @@ class Pegawai extends Model
     public function pendidikanRef(): BelongsTo
     {
         return $this->belongsTo(Pendidikan::class, 'pendidikan', 'tingkat');
+    }
+
+    public function payrollSetting(): HasOne
+    {
+        return $this->hasOne(PegawaiPayroll::class, 'nik', 'nik');
+    }
+
+    public function slipGaji(): HasMany
+    {
+        return $this->hasMany(SlipGaji::class, 'pegawai_id', 'id');
     }
 
     // ─── Relasi ke tabel BARU ──────────────────────────────────────────────────
