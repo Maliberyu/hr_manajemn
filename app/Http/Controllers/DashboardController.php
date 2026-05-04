@@ -7,7 +7,8 @@ use App\Models\Absensi;
 use App\Models\PengajuanCuti;
 use App\Models\Lembur;
 use App\Models\Rekrutmen;
-use App\Models\Training;
+use App\Models\IHTPeserta;
+use App\Models\TrainingEksternal;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -23,7 +24,7 @@ class DashboardController extends Controller
             'cuti_menunggu'     => $this->safe(fn() => PengajuanCuti::menungguApproval()->count()),
             'lembur_menunggu'   => $this->safe(fn() => Lembur::menungguApproval()->count()),
             'lowongan_buka'     => $this->safe(fn() => Rekrutmen::buka()->count()),
-            'training_berjalan' => $this->safe(fn() => Training::where('status', 'berjalan')->count()),
+            'training_berjalan' => $this->safe(fn() => \App\Models\IHT::where('status', 'aktif')->count()),
         ];
 
         $absensiHariIni = $this->safe(function () {
@@ -112,8 +113,34 @@ class DashboardController extends Controller
             collect()
         );
 
+        // Riwayat training karyawan
+        $trainingIHT = $this->safe(
+            fn() => IHTPeserta::with('iht')
+                ->where('pegawai_id', $pegawai->id)
+                ->orderByDesc('created_at')->limit(20)->get(),
+            collect()
+        );
+
+        $trainingEksternal = $this->safe(
+            fn() => TrainingEksternal::where('pegawai_id', $pegawai->id)
+                ->orderByDesc('created_at')->limit(20)->get(),
+            collect()
+        );
+
+        // Badge: sertifikat akan expired dalam 30 hari
+        $expiringSoon = $this->safe(
+            fn() => TrainingEksternal::where('pegawai_id', $pegawai->id)
+                ->where('status', 'tervalidasi')
+                ->whereNotNull('masa_berlaku')
+                ->whereDate('masa_berlaku', '>=', today())
+                ->whereDate('masa_berlaku', '<=', today()->addDays(30))
+                ->count(),
+            0
+        );
+
         return view('ess.dashboard', compact(
-            'pegawai', 'absensiHariIni', 'cutiSaya', 'sisaCuti', 'pegawaiPj'
+            'pegawai', 'absensiHariIni', 'cutiSaya', 'sisaCuti', 'pegawaiPj',
+            'trainingIHT', 'trainingEksternal', 'expiringSoon'
         ));
     }
 

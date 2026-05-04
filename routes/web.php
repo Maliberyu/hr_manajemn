@@ -15,6 +15,7 @@ use App\Http\Controllers\Kinerja\PenilaianPrestasiController;
 use App\Http\Controllers\Kinerja\Penilaian360Controller;
 use App\Http\Controllers\Rekrutmen\RekrutmenController;
 use App\Http\Controllers\Training\TrainingController;
+use App\Http\Controllers\Training\TrainingEksternalController;
 use App\Http\Controllers\Login\LoginController;
 use App\Http\Controllers\Register\RegisterController;
 use App\Http\Controllers\Pengaturan\UserController;
@@ -235,23 +236,50 @@ Route::middleware(['auth'])->group(function () {
     });
 
     // ═══════════════════════════════════════════════════════════════════════════
-    // MODUL: TRAINING & SERTIFIKASI
+    // MODUL: TRAINING — IHT (In-House Training)
     // ═══════════════════════════════════════════════════════════════════════════
     Route::prefix('training')->name('training.')->group(function () {
-        Route::get('/',                                                           [TrainingController::class, 'index'])->name('index');
-        Route::get('/buat',                                                       [TrainingController::class, 'create'])->name('create');
-        Route::post('/',                                                          [TrainingController::class, 'store'])->name('store');
-        Route::get('/sertifikasi',                                                [TrainingController::class, 'sertifikasi'])->name('sertifikasi');
-        Route::get('/{training}',                                                 [TrainingController::class, 'show'])->name('show');
-        Route::get('/{training}/edit',                                            [TrainingController::class, 'edit'])->name('edit');
-        Route::put('/{training}',                                                 [TrainingController::class, 'update'])->name('update');
-        Route::delete('/{training}',                                              [TrainingController::class, 'destroy'])->name('destroy');
 
-        // Peserta
-        Route::post('/{training}/peserta',                                        [TrainingController::class, 'storePeserta'])->name('peserta.store');
-        Route::put('/{training}/peserta/{peserta}/status',                        [TrainingController::class, 'updateStatusPeserta'])->name('peserta.status');
-        Route::delete('/{training}/peserta/{peserta}',                            [TrainingController::class, 'destroyPeserta'])->name('peserta.destroy');
-        Route::get('/peserta/{peserta}/sertifikat',                               [TrainingController::class, 'downloadSertifikat'])->name('peserta.sertifikat');
+        // Setting
+        Route::get('/setting',                                                    [TrainingController::class, 'setting'])->name('setting');
+        Route::post('/setting',                                                   [TrainingController::class, 'settingUpdate'])->name('setting.update');
+
+        // IHT CRUD
+        Route::prefix('iht')->name('iht.')->group(function () {
+            Route::get('/',                                                       [TrainingController::class, 'index'])->name('index');
+            Route::get('/buat',                                                   [TrainingController::class, 'create'])->name('create');
+            Route::post('/',                                                      [TrainingController::class, 'store'])->name('store');
+            Route::get('/{iht}',                                                  [TrainingController::class, 'show'])->name('show');
+            Route::get('/{iht}/edit',                                             [TrainingController::class, 'edit'])->name('edit');
+            Route::put('/{iht}',                                                  [TrainingController::class, 'update'])->name('update');
+            Route::post('/{iht}/tutup',                                           [TrainingController::class, 'tutup'])->name('tutup');
+            Route::delete('/{iht}',                                               [TrainingController::class, 'destroy'])->name('destroy');
+            // Peserta
+            Route::post('/{iht}/peserta',                                         [TrainingController::class, 'storePeserta'])->name('peserta.store');
+            Route::put('/{iht}/peserta/{peserta}/status',                         [TrainingController::class, 'updateStatusPeserta'])->name('peserta.status');
+            Route::delete('/{iht}/peserta/{peserta}',                             [TrainingController::class, 'destroyPeserta'])->name('peserta.destroy');
+            // Sertifikat
+            Route::post('/{iht}/peserta/{peserta}/sertifikat',                    [TrainingController::class, 'generateSertifikat'])->name('peserta.sertifikat.generate');
+            Route::get('/{iht}/peserta/{peserta}/sertifikat/download',            [TrainingController::class, 'downloadSertifikat'])->name('peserta.sertifikat.download');
+        });
+
+        // ═══════════════════════════════════════════════════════════════════════
+        // MODUL: TRAINING — External
+        // ═══════════════════════════════════════════════════════════════════════
+        Route::prefix('eksternal')->name('eksternal.')->group(function () {
+            Route::get('/',                                                       [TrainingEksternalController::class, 'index'])->name('index');
+            Route::get('/buat',                                                   [TrainingEksternalController::class, 'create'])->name('create');
+            Route::post('/',                                                      [TrainingEksternalController::class, 'store'])->name('store');
+            Route::get('/{eksternal}',                                            [TrainingEksternalController::class, 'show'])->name('show');
+            // Approval
+            Route::post('/{eksternal}/approve-atasan',                            [TrainingEksternalController::class, 'approveAtasan'])->name('approve.atasan');
+            Route::post('/{eksternal}/tolak-atasan',                              [TrainingEksternalController::class, 'tolakAtasan'])->name('tolak.atasan');
+            Route::post('/{eksternal}/approve-hrd',                               [TrainingEksternalController::class, 'approveHrd'])->name('approve.hrd');
+            Route::post('/{eksternal}/tolak-hrd',                                 [TrainingEksternalController::class, 'tolakHrd'])->name('tolak.hrd');
+            // Upload sertifikat & validasi
+            Route::post('/{eksternal}/upload-sertifikat',                         [TrainingEksternalController::class, 'uploadSertifikat'])->name('upload.sertifikat');
+            Route::post('/{eksternal}/validasi',                                  [TrainingEksternalController::class, 'validasi'])->name('validasi');
+        });
     });
 
     // ═══════════════════════════════════════════════════════════════════════════

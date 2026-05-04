@@ -59,7 +59,7 @@
         </div>
 
         {{-- Nav --}}
-        <nav class="flex-1 overflow-y-auto py-4 space-y-0.5 px-2">
+        <!-- <nav class="flex-1 overflow-y-auto py-4 space-y-0.5 px-2">
 
             @php
             $menu = [
@@ -72,9 +72,12 @@
                 ['label'=>'Payroll',          'route'=>'payroll.index',    'icon'=>'M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z'],
                 ['label'=>'Penilaian Kinerja','route'=>'kinerja.index',    'icon'=>'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z'],
                 ['label'=>'Rekrutmen',        'route'=>'rekrutmen.index',  'icon'=>'M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z'],
-                ['label'=>'Training',         'route'=>'training.index',   'icon'=>'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253'],
                 ['label'=>'Manajemen User',   'route'=>'pengaturan.users.index', 'icon'=>'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z'],
             ];
+
+            $trainingIcon = 'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253';
+            $trainingActive = request()->routeIs('training.*');
+            $pendingEksternal = \App\Models\TrainingEksternal::whereIn('status', ['menunggu_atasan','menunggu_hrd','menunggu_validasi'])->count();
             @endphp
 
             @foreach($menu as $item)
@@ -95,7 +98,169 @@
             </a>
             @endforeach
 
-        </nav>
+            {{-- Training: group dengan sub-menu --}}
+            <div x-data="{ open: {{ $trainingActive ? 'true' : 'false' }} }">
+                <button @click="open = !open"
+                        class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition group
+                               {{ $trainingActive ? 'bg-blue-500/30 text-white' : 'text-blue-200 hover:bg-blue-800/50 hover:text-white' }}">
+                    <svg class="w-5 h-5 flex-shrink-0 {{ $trainingActive ? 'text-blue-300' : 'text-blue-400 group-hover:text-blue-200' }}"
+                         fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="{{ $trainingIcon }}"/>
+                    </svg>
+                    <span x-show="sidebarOpen" x-transition class="whitespace-nowrap flex-1 text-left">Training</span>
+                    @if($pendingEksternal > 0)
+                    <span x-show="sidebarOpen" class="px-1.5 py-0.5 text-xs bg-orange-400 text-white rounded-full font-bold leading-none">
+                        {{ $pendingEksternal }}
+                    </span>
+                    @endif
+                    <svg x-show="sidebarOpen" class="w-3.5 h-3.5 flex-shrink-0 transition-transform" :class="open ? 'rotate-180' : ''"
+                         fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                    </svg>
+                </button>
+
+                <div x-show="open && sidebarOpen" x-cloak class="ml-4 mt-0.5 space-y-0.5">
+                    @php
+                        $subMenu = [
+                            ['label'=>'IHT', 'route'=>'training.iht.index', 'match'=>'training.iht.*'],
+                            ['label'=>'Eksternal', 'route'=>'training.eksternal.index', 'match'=>'training.eksternal.*'],
+                            ['label'=>'Setting', 'route'=>'training.setting', 'match'=>'training.setting'],
+                        ];
+                    @endphp
+                    @foreach($subMenu as $sub)
+                    @php $subActive = request()->routeIs($sub['match']) @endphp
+                    <a href="{{ route($sub['route']) }}"
+                       class="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium transition
+                              {{ $subActive ? 'bg-blue-500/20 text-white' : 'text-blue-300 hover:bg-blue-800/40 hover:text-white' }}">
+                        <span class="w-1 h-1 rounded-full bg-current opacity-60"></span>
+                        {{ $sub['label'] }}
+                        @if($sub['route'] === 'training.eksternal.index' && $pendingEksternal > 0)
+                        <span class="ml-auto px-1.5 py-0.5 text-xs bg-orange-400 text-white rounded-full font-bold leading-none">
+                            {{ $pendingEksternal }}
+                        </span>
+                        @endif
+                    </a>
+                    @endforeach
+                </div>
+            </div>
+
+        </nav> -->
+        <nav class="flex-1 overflow-y-auto py-4 space-y-0.5 px-2">
+
+    @php
+    $menu = [
+        ['label'=>'Dashboard',        'route'=>'dashboard',        'icon'=>'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6'],
+        ['label'=>'Master Karyawan',  'route'=>'karyawan.index',   'icon'=>'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z'],
+        ['label'=>'Absensi',          'route'=>'absensi.index',    'icon'=>'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z'],
+        ['label'=>'Cuti',             'route'=>'cuti.index',       'icon'=>'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z'],
+        ['label'=>'Shift Kerja',      'route'=>'shift.index',      'icon'=>'M4 6h16M4 10h16M4 14h16M4 18h16'],
+        ['label'=>'Lembur',           'route'=>'lembur.index',     'icon'=>'M13 10V3L4 14h7v7l9-11h-7z'],
+        ['label'=>'Payroll',          'route'=>'payroll.index',    'icon'=>'M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z'],
+        ['label'=>'Penilaian Kinerja','route'=>'kinerja.index',    'icon'=>'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z'],
+        ['label'=>'Rekrutmen',        'route'=>'rekrutmen.index',  'icon'=>'M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z'],
+    ];
+
+    $trainingIcon = 'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253';
+
+    $trainingActive = request()->routeIs('training.*');
+
+    $pendingEksternal = \App\Models\TrainingEksternal::whereIn('status', [
+        'menunggu_atasan','menunggu_hrd','menunggu_validasi'
+    ])->count();
+    @endphp
+
+    {{-- MAIN MENU --}}
+    @foreach($menu as $item)
+    @php $active = request()->routeIs($item['route']) @endphp
+
+    <a href="{{ route($item['route']) }}"
+       class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition group
+              {{ $active ? 'bg-blue-500/30 text-white' : 'text-blue-200 hover:bg-blue-800/50 hover:text-white' }}">
+
+        <svg class="w-5 h-5 flex-shrink-0 {{ $active ? 'text-blue-300' : 'text-blue-400 group-hover:text-blue-200' }}"
+             fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="{{ $item['icon'] }}"/>
+        </svg>
+
+        <span x-show="sidebarOpen" x-transition class="whitespace-nowrap">
+            {{ $item['label'] }}
+        </span>
+
+        @if($active)
+        <span x-show="sidebarOpen" class="ml-auto w-1.5 h-1.5 rounded-full bg-blue-400"></span>
+        @endif
+    </a>
+    @endforeach
+
+
+    {{-- TRAINING --}}
+    <div x-data="{ open: {{ $trainingActive ? 'true' : 'false' }} }">
+
+        <button @click="open = !open"
+                class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition group
+                       {{ $trainingActive ? 'bg-blue-500/30 text-white' : 'text-blue-200 hover:bg-blue-800/50 hover:text-white' }}">
+
+            <svg class="w-5 h-5 flex-shrink-0 {{ $trainingActive ? 'text-blue-300' : 'text-blue-400 group-hover:text-blue-200' }}"
+                 fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="{{ $trainingIcon }}"/>
+            </svg>
+
+            <span x-show="sidebarOpen" class="flex-1 text-left">Training</span>
+
+            @if($pendingEksternal > 0)
+            <span x-show="sidebarOpen"
+                  class="px-1.5 py-0.5 text-xs bg-orange-400 text-white rounded-full font-bold">
+                {{ $pendingEksternal }}
+            </span>
+            @endif
+
+            <svg x-show="sidebarOpen"
+                 class="w-3.5 h-3.5 transition-transform"
+                 :class="open ? 'rotate-180' : ''"
+                 fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-width="2" d="M19 9l-7 7-7-7"/>
+            </svg>
+        </button>
+
+        <div x-show="open && sidebarOpen" class="ml-4 mt-1 space-y-1">
+            <a href="{{ route('training.iht.index') }}" class="block px-3 py-2 text-xs text-blue-300 hover:bg-blue-800/40 rounded-xl">IHT</a>
+            <a href="{{ route('training.eksternal.index') }}" class="block px-3 py-2 text-xs text-blue-300 hover:bg-blue-800/40 rounded-xl">
+                Eksternal
+                @if($pendingEksternal > 0)
+                <span class="ml-2 text-orange-400">{{ $pendingEksternal }}</span>
+                @endif
+            </a>
+            <a href="{{ route('training.setting') }}" class="block px-3 py-2 text-xs text-blue-300 hover:bg-blue-800/40 rounded-xl">Setting</a>
+        </div>
+    </div>
+
+
+    {{-- ADMIN SECTION --}}
+    <div class="pt-4 mt-4 border-t border-blue-800">
+
+        <p x-show="sidebarOpen"
+           class="px-3 mb-2 text-[10px] uppercase tracking-wider text-blue-400">
+            
+        </p>
+
+        @php $userActive = request()->routeIs('pengaturan.users.*') @endphp
+
+        <a href="{{ route('pengaturan.users.index') }}"
+           class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition group
+                  {{ $userActive ? 'bg-blue-500/30 text-white' : 'text-blue-200 hover:bg-blue-800/50 hover:text-white' }}">
+
+            <svg class="w-5 h-5 flex-shrink-0 {{ $userActive ? 'text-blue-300' : 'text-blue-400 group-hover:text-blue-200' }}"
+                 fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-width="1.8"
+                    d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1z"/>
+            </svg>
+
+            <span x-show="sidebarOpen">Manajemen User</span>
+        </a>
+
+    </div>
+
+</nav>
 
         {{-- User info bottom --}}
         <div class="border-t border-blue-800 p-3" x-show="sidebarOpen">

@@ -3,213 +3,262 @@
 namespace App\Http\Controllers\Training;
 
 use App\Http\Controllers\Controller;
-use App\Models\Training;
-use App\Models\TrainingPeserta;
-use App\Models\Sertifikasi;
+use App\Models\IHT;
+use App\Models\IHTPeserta;
+use App\Models\BerkasPegawai;
+use App\Models\MasterBerkasPegawai;
 use App\Models\Pegawai;
+use App\Models\TrainingSetting;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class TrainingController extends Controller
 {
-    public function __construct()
-    {
-    }
-
-    // ─── Index semua training ─────────────────────────────────────────────────
+    // ── Index ──────────────────────────────────────────────────────────────────
 
     public function index(Request $request)
     {
-        $training = Training::with('dibuatOleh')
-            ->withCount('peserta')
+        $ihtList = IHT::withCount('peserta')
             ->when($request->status, fn($q, $s) => $q->where('status', $s))
-            ->when($request->jenis, fn($q, $j) => $q->where('jenis', $j))
             ->when($request->q, fn($q, $s) => $q->where('nama_training', 'like', "%{$s}%"))
             ->orderByDesc('tanggal_mulai')
             ->paginate(20)->withQueryString();
 
-        return view('training.index', compact('training'));
+        $pendingCount = IHT::where('status', 'draft')->count();
+
+        return view('training.iht.index', compact('ihtList', 'pendingCount'));
     }
 
-    // ─── Tambah training baru ─────────────────────────────────────────────────
+    // ── Create / Store ─────────────────────────────────────────────────────────
 
     public function create()
     {
-        return view('training.create');
+        return view('training.iht.create');
     }
 
     public function store(Request $request)
     {
-        $validated = $request->validate([
-            'nama_training'   => 'required|max:200',
-            'penyelenggara'   => 'required|max:100',
-            'tanggal_mulai'   => 'required|date',
-            'tanggal_selesai' => 'required|date|after_or_equal:tanggal_mulai',
-            'lokasi'          => 'required|max:150',
-            'jenis'           => 'required|in:' . implode(',', Training::JENIS),
-            'biaya'           => 'nullable|numeric|min:0',
-            'kuota'           => 'nullable|integer|min:1',
-            'deskripsi'       => 'nullable|max:2000',
+        $v = $request->validate([
+            'nama_training'       => 'required|max:200',
+            'penyelenggara'       => 'required|max:100',
+            'pemateri'            => 'nullable|max:150',
+            'lokasi'              => 'required|max:150',
+            'tanggal_mulai'       => 'required|date',
+            'tanggal_selesai'     => 'required|date|after_or_equal:tanggal_mulai',
+            'jam_mulai'           => 'nullable|date_format:H:i',
+            'jam_selesai'         => 'nullable|date_format:H:i',
+            'deskripsi'           => 'nullable|max:3000',
+            'kuota'               => 'nullable|integer|min:1',
+            'penandatangan_nama'  => 'nullable|max:100',
+            'penandatangan_jabatan' => 'nullable|max:100',
+            'status'              => 'required|in:draft,aktif',
         ]);
 
-        Training::create([...$validated, 'status' => 'rencana', 'dibuat_oleh' => auth()->id()]);
+        IHT::create([...$v, 'dibuat_oleh' => auth()->id()]);
 
-        return redirect()->route('training.index')
-            ->with('success', "Training {$validated['nama_training']} berhasil ditambahkan.");
+        return redirect()->route('training.iht.index')
+            ->with('success', "IHT \"{$v['nama_training']}\" berhasil dibuat.");
     }
 
-    // ─── Detail training + peserta ────────────────────────────────────────────
+    // ── Show ──────────────────────────────────────────────────────────────────
 
-    public function show(Training $training)
+    public function show(IHT $iht)
     {
-        $training->load('dibuatOleh');
+        $iht->load('dibuatOleh');
 
-        $peserta = TrainingPeserta::with('pegawai.departemenRef')
-            ->where('training_id', $training->id)
+        $peserta = IHTPeserta::with('pegawai.departemenRef')
+            ->where('iht_id', $iht->id)
             ->orderBy('created_at')
             ->get();
 
-        $pegawaiTerdaftar = $peserta->pluck('pegawai_id');
+        $terdaftarIds = $peserta->pluck('pegawai_id');
         $pegawaiBelum = Pegawai::aktif()
-            ->whereNotIn('id', $pegawaiTerdaftar)
-            ->orderBy('nama')->get(['id', 'nama', 'nik', 'jbtn']);
+            ->whereNotIn('id', $terdaftarIds)
+            ->orderBy('nama')
+            ->get(['id', 'nama', 'nik', 'jbtn']);
 
-        return view('training.show', compact('training', 'peserta', 'pegawaiBelum'));
+        return view('training.iht.show', compact('iht', 'peserta', 'pegawaiBelum'));
     }
 
-    // ─── Edit & Update training ───────────────────────────────────────────────
+    // ── Edit / Update ─────────────────────────────────────────────────────────
 
-    public function edit(Training $training)
+    public function edit(IHT $iht)
     {
-        return view('training.edit', compact('training'));
+        abort_if($iht->status === 'selesai', 403, 'Training sudah selesai.');
+        return view('training.iht.edit', compact('iht'));
     }
 
-    public function update(Request $request, Training $training)
+    public function update(Request $request, IHT $iht)
     {
-        $validated = $request->validate([
-            'nama_training'   => 'required|max:200',
-            'penyelenggara'   => 'required|max:100',
-            'tanggal_mulai'   => 'required|date',
-            'tanggal_selesai' => 'required|date|after_or_equal:tanggal_mulai',
-            'lokasi'          => 'required|max:150',
-            'jenis'           => 'required|in:' . implode(',', Training::JENIS),
-            'status'          => 'required|in:' . implode(',', Training::STATUS),
-            'biaya'           => 'nullable|numeric|min:0',
-            'kuota'           => 'nullable|integer|min:1',
-            'deskripsi'       => 'nullable|max:2000',
+        $v = $request->validate([
+            'nama_training'         => 'required|max:200',
+            'penyelenggara'         => 'required|max:100',
+            'pemateri'              => 'nullable|max:150',
+            'lokasi'                => 'required|max:150',
+            'tanggal_mulai'         => 'required|date',
+            'tanggal_selesai'       => 'required|date|after_or_equal:tanggal_mulai',
+            'jam_mulai'             => 'nullable|date_format:H:i',
+            'jam_selesai'           => 'nullable|date_format:H:i',
+            'deskripsi'             => 'nullable|max:3000',
+            'kuota'                 => 'nullable|integer|min:1',
+            'penandatangan_nama'    => 'nullable|max:100',
+            'penandatangan_jabatan' => 'nullable|max:100',
+            'status'                => 'required|in:draft,aktif,selesai,dibatalkan',
         ]);
 
-        $training->update($validated);
-        return redirect()->route('training.show', $training)->with('success', 'Data training diperbarui.');
+        $iht->update($v);
+        return redirect()->route('training.iht.show', $iht)
+            ->with('success', 'Data IHT diperbarui.');
     }
 
-    // ─── Daftarkan pegawai sebagai peserta ────────────────────────────────────
+    // ── Tambah Peserta ─────────────────────────────────────────────────────────
 
-    public function storePeserta(Request $request, Training $training)
+    public function storePeserta(Request $request, IHT $iht)
     {
         $request->validate([
-            'pegawai_ids'   => 'required|array',
-            'pegawai_ids.*' => 'exists:pegawai,id',
+            'pegawai_ids'   => 'required|array|min:1',
+            'pegawai_ids.*' => 'integer',
         ]);
 
-        // Cek kuota
-        if ($training->kuota) {
-            $terdaftar = TrainingPeserta::where('training_id', $training->id)->count();
-            $sisa      = $training->kuota - $terdaftar;
+        if ($iht->kuota) {
+            $terdaftar = $iht->peserta()->count();
+            $sisa = $iht->kuota - $terdaftar;
             if (count($request->pegawai_ids) > $sisa) {
-                return back()->withErrors(['kuota' => "Kuota training hanya tersisa {$sisa} slot."]);
+                return back()->withErrors(['kuota' => "Kuota tersisa $sisa slot."]);
             }
         }
 
-        foreach ($request->pegawai_ids as $pegawaiId) {
-            TrainingPeserta::firstOrCreate([
-                'training_id' => $training->id,
-                'pegawai_id'  => $pegawaiId,
-            ], ['status' => 'terdaftar']);
-        }
-
-        return back()->with('success', count($request->pegawai_ids) . ' peserta berhasil didaftarkan.');
-    }
-
-    // ─── Update status peserta (terdaftar/hadir/selesai) ────────────────────
-
-    public function updateStatusPeserta(Request $request, Training $training, TrainingPeserta $peserta)
-    {
-        $request->validate([
-            'status'          => 'required|in:terdaftar,hadir,selesai',
-            'nilai'           => 'nullable|numeric|min:0|max:100',
-            'sertifikat_file' => 'nullable|file|mimes:pdf|max:3072',
-        ]);
-
-        $data = $request->only('status', 'nilai');
-
-        if ($request->hasFile('sertifikat_file')) {
-            if ($peserta->sertifikat_file) {
-                Storage::disk('public')->delete($peserta->sertifikat_file);
-            }
-            $data['sertifikat_file'] = $request->file('sertifikat_file')
-                ->store("training/sertifikat/{$training->id}", 'public');
-        }
-
-        $peserta->update($data);
-
-        // Jika selesai + ada nilai, otomatis buat record sertifikasi
-        if ($request->status === 'selesai' && $request->hasFile('sertifikat_file')) {
-            Sertifikasi::updateOrCreate(
-                [
-                    'pegawai_id'     => $peserta->pegawai_id,
-                    'nama_sertifikat'=> $training->nama_training,
-                ],
-                [
-                    'lembaga'        => $training->penyelenggara,
-                    'tanggal_terbit' => $training->tanggal_selesai,
-                    'file_sertifikat'=> $data['sertifikat_file'] ?? null,
-                    'status'         => 'aktif',
-                ]
+        foreach ($request->pegawai_ids as $id) {
+            IHTPeserta::firstOrCreate(
+                ['iht_id' => $iht->id, 'pegawai_id' => $id],
+                ['status' => 'terdaftar']
             );
         }
 
-        return back()->with('success', "Status peserta {$peserta->pegawai->nama} diperbarui.");
+        return back()->with('success', count($request->pegawai_ids) . ' peserta ditambahkan.');
     }
 
-    // ─── Hapus peserta ────────────────────────────────────────────────────────
+    // ── Update Status Peserta ──────────────────────────────────────────────────
 
-    public function destroyPeserta(Training $training, TrainingPeserta $peserta)
+    public function updateStatusPeserta(Request $request, IHT $iht, IHTPeserta $peserta)
     {
-        if ($peserta->sertifikat_file) Storage::disk('public')->delete($peserta->sertifikat_file);
+        $request->validate([
+            'status' => 'required|in:terdaftar,hadir,tidak_hadir,selesai',
+            'nilai'  => 'nullable|numeric|min:0|max:100',
+        ]);
+
+        $peserta->update($request->only('status', 'nilai'));
+        return back()->with('success', "Status {$peserta->pegawai->nama} diperbarui.");
+    }
+
+    // ── Hapus Peserta ─────────────────────────────────────────────────────────
+
+    public function destroyPeserta(IHT $iht, IHTPeserta $peserta)
+    {
+        abort_if($peserta->sudahSertifikat(), 403, 'Peserta sudah memiliki sertifikat.');
         $peserta->delete();
-        return back()->with('success', 'Peserta dihapus dari training.');
+        return back()->with('success', 'Peserta dihapus.');
     }
 
-    // ─── Halaman sertifikasi semua pegawai ────────────────────────────────────
+    // ── Generate Sertifikat ───────────────────────────────────────────────────
 
-    public function sertifikasi(Request $request)
+    public function generateSertifikat(IHT $iht, IHTPeserta $peserta)
     {
-        $sertifikasi = Sertifikasi::with('pegawai.departemenRef')
-            ->when($request->status, fn($q, $s) => $q->where('status', $s))
-            ->when($request->q, fn($q, $s) =>
-                $q->where('nama_sertifikat', 'like', "%{$s}%")
-                  ->orWhereHas('pegawai', fn($p) => $p->cari($s)))
-            ->orderByDesc('tanggal_terbit')
-            ->paginate(25)->withQueryString();
+        abort_unless(in_array($peserta->status, ['hadir', 'selesai']), 422, 'Peserta belum hadir.');
 
-        return view('training.sertifikasi', compact('sertifikasi'));
+        $nomor = IHT::generateNomorSertifikat();
+        $logo  = TrainingSetting::logoUrl();
+
+        $pdf = Pdf::loadView('training.iht.sertifikat-pdf', compact('iht', 'peserta', 'nomor', 'logo'))
+                  ->setPaper('a4', 'landscape');
+
+        $filename = "sertifikat_{$iht->id}_{$peserta->pegawai_id}.pdf";
+        $path     = "training/sertifikat/{$filename}";
+
+        Storage::disk('public')->put($path, $pdf->output());
+
+        $peserta->update([
+            'nomor_sertifikat' => $nomor,
+            'sertifikat_path'  => $path,
+            'sertifikat_at'    => now(),
+            'status'           => 'selesai',
+        ]);
+
+        // Push ke hr_berkas pegawai
+        $this->pushKeBerkas($peserta, $iht->nama_training, $path, $nomor);
+
+        return back()->with('success', "Sertifikat {$nomor} berhasil dibuat untuk {$peserta->pegawai->nama}.");
     }
 
-    // ─── Download sertifikat ─────────────────────────────────────────────────
+    // ── Download Sertifikat ────────────────────────────────────────────────────
 
-    public function downloadSertifikat(TrainingPeserta $peserta)
+    public function downloadSertifikat(IHT $iht, IHTPeserta $peserta)
     {
-        abort_unless($peserta->sertifikat_file, 404);
+        abort_unless($peserta->sertifikat_path, 404);
         return Storage::disk('public')->download(
-            $peserta->sertifikat_file,
-            "Sertifikat_{$peserta->pegawai->nama}_{$peserta->training->nama_training}.pdf"
+            $peserta->sertifikat_path,
+            "Sertifikat_{$peserta->pegawai->nama}_{$iht->nama_training}.pdf"
         );
     }
 
-    public function destroy(Training $training)
+    // ── Tutup / Batalkan ──────────────────────────────────────────────────────
+
+    public function tutup(IHT $iht)
     {
-        $training->update(['status' => 'dibatalkan']);
-        return redirect()->route('training.index')->with('success', 'Training dibatalkan.');
+        $iht->update(['status' => 'selesai']);
+        return back()->with('success', 'IHT ditutup.');
+    }
+
+    public function destroy(IHT $iht)
+    {
+        $iht->update(['status' => 'dibatalkan']);
+        return redirect()->route('training.iht.index')->with('success', 'IHT dibatalkan.');
+    }
+
+    // ── Setting Training ──────────────────────────────────────────────────────
+
+    public function setting()
+    {
+        $logoUrl = TrainingSetting::logoUrl();
+        return view('training.setting', compact('logoUrl'));
+    }
+
+    public function settingUpdate(Request $request)
+    {
+        $request->validate([
+            'logo_rs' => 'nullable|file|mimes:png,jpg,jpeg,svg|max:2048',
+        ]);
+
+        if ($request->hasFile('logo_rs')) {
+            $old = TrainingSetting::get('logo_rs');
+            if ($old) Storage::disk('public')->delete($old);
+
+            $path = $request->file('logo_rs')->store('training/setting', 'public');
+            TrainingSetting::set('logo_rs', $path);
+        }
+
+        return back()->with('success', 'Setting training diperbarui.');
+    }
+
+    // ── Helper ─────────────────────────────────────────────────────────────────
+
+    private function pushKeBerkas(IHTPeserta $peserta, string $namaTraining, string $path, string $nomor): void
+    {
+        if (!$peserta->pegawai->nik) return;
+
+        $jenis = MasterBerkasPegawai::firstOrCreate(
+            ['nama' => 'Sertifikat Training IHT'],
+            ['kategori' => 'Pelatihan', 'urutan' => (MasterBerkasPegawai::max('urutan') ?? 0) + 1]
+        );
+
+        BerkasPegawai::updateOrCreate(
+            ['nik' => $peserta->pegawai->nik, 'jenis_id' => $jenis->id, 'keterangan' => $nomor],
+            [
+                'nama_file'  => "Sertifikat_{$namaTraining}_{$peserta->pegawai->nama}.pdf",
+                'path'       => $path,
+                'tgl_upload' => today(),
+            ]
+        );
     }
 }

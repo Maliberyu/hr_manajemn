@@ -59,6 +59,19 @@
             <span class="w-1.5 h-1.5 rounded-full bg-orange-400 flex-shrink-0"></span>
             @endif
         </button>
+        <button @click="tab = 'training'"
+                :class="tab === 'training'
+                    ? 'bg-blue-600 text-white shadow-sm'
+                    : 'text-gray-500 hover:bg-gray-50'"
+                class="flex-1 py-2 text-sm font-semibold rounded-xl transition flex items-center justify-center gap-1.5">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+            </svg>
+            Training
+            @if($expiringSoon > 0)
+            <span class="w-1.5 h-1.5 rounded-full bg-orange-400 flex-shrink-0"></span>
+            @endif
+        </button>
     </div>
 
     {{-- ════════════════════════════════════════════════════════════════════ --}}
@@ -391,6 +404,104 @@
         </div>
 
     </div>{{-- end tab cuti --}}
+
+    {{-- ════════════════════════════════════════════════════════════════════ --}}
+    {{-- TAB TRAINING                                                         --}}
+    {{-- ════════════════════════════════════════════════════════════════════ --}}
+    <div x-show="tab === 'training'" x-cloak class="space-y-4">
+
+        @if($expiringSoon > 0)
+        <div class="px-4 py-3 bg-orange-50 border border-orange-200 text-orange-700 rounded-xl text-sm">
+            ⚠️ <strong>{{ $expiringSoon }}</strong> sertifikat Anda akan expired dalam 30 hari. Segera perbarui.
+        </div>
+        @endif
+
+        {{-- IHT yang Diikuti --}}
+        <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+            <p class="text-sm font-semibold text-gray-700 mb-3">IHT yang Diikuti</p>
+            @if($trainingIHT->isEmpty())
+            <p class="text-xs text-gray-400 text-center py-4">Belum ada IHT yang diikuti.</p>
+            @else
+            <ul class="space-y-2">
+                @foreach($trainingIHT as $t)
+                @php
+                    $stColor = match($t->status) {
+                        'selesai' => 'bg-green-100 text-green-700',
+                        'hadir'   => 'bg-blue-100 text-blue-700',
+                        'tidak_hadir' => 'bg-red-100 text-red-600',
+                        default   => 'bg-gray-100 text-gray-600',
+                    };
+                @endphp
+                <li class="flex items-center justify-between gap-3 p-3 bg-gray-50 rounded-xl">
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm font-medium text-gray-800 truncate">{{ $t->iht?->nama_training }}</p>
+                        <p class="text-xs text-gray-400 mt-0.5">
+                            {{ $t->iht?->tanggal_mulai?->translatedFormat('d M Y') }} · {{ $t->iht?->lokasi }}
+                        </p>
+                        @if($t->nomor_sertifikat)
+                        <p class="text-xs font-mono text-green-600 mt-0.5">{{ $t->nomor_sertifikat }}</p>
+                        @endif
+                    </div>
+                    <div class="flex items-center gap-2 flex-shrink-0">
+                        <span class="px-2 py-0.5 text-xs font-medium rounded-lg {{ $stColor }}">
+                            {{ \App\Models\IHTPeserta::STATUS[$t->status] ?? $t->status }}
+                        </span>
+                        @if($t->sudahSertifikat())
+                        <a href="{{ route('training.iht.peserta.sertifikat.download', [$t->iht_id, $t->id]) }}"
+                           class="text-xs text-blue-500 hover:text-blue-700">⬇</a>
+                        @endif
+                    </div>
+                </li>
+                @endforeach
+            </ul>
+            @endif
+        </div>
+
+        {{-- Training Eksternal --}}
+        <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+            <div class="flex items-center justify-between mb-3">
+                <p class="text-sm font-semibold text-gray-700">Training Eksternal</p>
+                <a href="{{ route('training.eksternal.create') }}"
+                   class="px-3 py-1 text-xs bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
+                    + Ajukan
+                </a>
+            </div>
+            @if($trainingEksternal->isEmpty())
+            <p class="text-xs text-gray-400 text-center py-4">Belum ada training eksternal.</p>
+            @else
+            <ul class="space-y-2">
+                @foreach($trainingEksternal as $e)
+                @php
+                    $expired  = $e->isExpired();
+                    $expiring = !$expired && $e->isExpiringSoon();
+                @endphp
+                <li class="flex items-center justify-between gap-3 p-3 bg-gray-50 rounded-xl">
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm font-medium text-gray-800 truncate">{{ $e->nama_training }}</p>
+                        <p class="text-xs text-gray-400 mt-0.5">{{ $e->lembaga }}
+                            · {{ $e->tanggal_mulai->translatedFormat('d M Y') }}</p>
+                        @if($e->masa_berlaku)
+                        <p class="text-xs mt-0.5 {{ $expired ? 'text-red-500 font-semibold' : ($expiring ? 'text-orange-500' : 'text-gray-400') }}">
+                            Berlaku s/d {{ $e->masa_berlaku->translatedFormat('d M Y') }}
+                            @if($expired)(Expired)@elseif($expiring)({{ $e->masa_berlaku->diffInDays(now()) }} hari lagi)@endif
+                        </p>
+                        @endif
+                    </div>
+                    <div class="flex items-center gap-2 flex-shrink-0">
+                        <span class="px-2 py-0.5 text-xs font-medium rounded-lg
+                            {{ \App\Models\TrainingEksternal::STATUS_COLOR[$e->status] ?? 'bg-gray-100 text-gray-500' }}">
+                            {{ \App\Models\TrainingEksternal::STATUS_LABEL[$e->status] ?? $e->status }}
+                        </span>
+                        <a href="{{ route('training.eksternal.show', $e) }}"
+                           class="text-xs text-blue-500 hover:text-blue-700">Detail →</a>
+                    </div>
+                </li>
+                @endforeach
+            </ul>
+            @endif
+        </div>
+
+    </div>{{-- end tab training --}}
 
 </div>
 @endsection
