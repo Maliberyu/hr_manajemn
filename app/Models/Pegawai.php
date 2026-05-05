@@ -50,6 +50,7 @@ class Pegawai extends Model
         'dankes',
         'photo',
         'no_ktp',
+        'status_kerja',
     ];
 
     protected $casts = [
@@ -90,10 +91,17 @@ class Pegawai extends Model
     /** URL foto profil (fallback ke avatar default jika kosong) */
     public function getFotoUrlAttribute(): string
     {
-        if ($this->photo && Storage::disk('public')->exists($this->photo)) {
-            return Storage::url($this->photo);
+        if ($this->photo) {
+            $path = $this->photo;
+            if (Storage::disk('public')->exists($path)) {
+                return Storage::url($path);
+            }
+            // coba path lama: langsung di root public
+            if (file_exists(public_path($path))) {
+                return asset($path);
+            }
         }
-        return asset('images/avatar-default.png');
+        return asset('images/avatar-default.svg');
     }
 
     /** Nama lengkap + jabatan */

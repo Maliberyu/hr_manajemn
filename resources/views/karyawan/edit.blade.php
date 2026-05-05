@@ -17,6 +17,14 @@
     <span class="text-gray-700 font-medium">Edit</span>
 </div>
 
+{{-- Form nonaktifkan berdiri sendiri di luar form utama --}}
+<form id="form-nonaktif"
+      method="POST" action="{{ route('karyawan.destroy', $karyawan) }}"
+      onsubmit="return confirm('Nonaktifkan {{ $karyawan->nama }}? Data tidak akan dihapus.')">
+    @csrf
+    @method('DELETE')
+</form>
+
 <form method="POST" action="{{ route('karyawan.update', $karyawan) }}" enctype="multipart/form-data">
     @csrf
     @method('PUT')
@@ -24,14 +32,10 @@
     @include('karyawan._form', ['karyawan' => $karyawan])
 
     <div class="mt-6 flex items-center justify-between">
-        <form method="POST" action="{{ route('karyawan.destroy', $karyawan) }}"
-              onsubmit="return confirm('Nonaktifkan {{ $karyawan->nama }}? Data tidak akan dihapus.')">
-            @csrf @method('DELETE')
-            <button type="submit"
-                    class="px-4 py-2 text-sm font-medium text-red-600 border border-red-200 rounded-xl hover:bg-red-50 transition">
-                Nonaktifkan
-            </button>
-        </form>
+        <button type="submit" form="form-nonaktif"
+                class="px-4 py-2 text-sm font-medium text-red-600 border border-red-200 rounded-xl hover:bg-red-50 transition">
+            Nonaktifkan
+        </button>
         <div class="flex items-center gap-3">
             <a href="{{ route('karyawan.show', $karyawan) }}"
                class="px-5 py-2 text-sm font-medium text-gray-600 border border-gray-200 rounded-xl hover:bg-gray-50 transition">
