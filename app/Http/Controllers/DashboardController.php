@@ -17,6 +17,11 @@ class DashboardController extends Controller
 {
     public function index()
     {
+        // Karyawan tidak punya akses dashboard HR — arahkan ke ESS
+        if (auth()->user()->hasRole('karyawan')) {
+            return redirect()->route('ess.dashboard');
+        }
+
         $stats = [
             'total_pegawai'     => $this->safe(fn() => Pegawai::aktif()->count()),
             'hadir_hari_ini'    => $this->safe(fn() => Absensi::hariIni()->where('status', 'hadir')->count()),

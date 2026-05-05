@@ -17,13 +17,25 @@ class TrainingEksternalController extends Controller
 
     public function index(Request $request)
     {
-        $list = TrainingEksternal::with('pegawai', 'submittedBy')
+        $query = TrainingEksternal::with('pegawai', 'submittedBy')
             ->when($request->status, fn($q, $s) => $q->where('status', $s))
             ->when($request->q, fn($q, $s) =>
                 $q->where('nama_training', 'like', "%{$s}%")
-                  ->orWhere('lembaga', 'like', "%{$s}%"))
-            ->orderByDesc('created_at')
-            ->paginate(20)->withQueryString();
+                  ->orWhere('lembaga', 'like', "%{$s}%"));
+
+        // Karyawan hanya lihat milik sendiri
+        // Atasan lihat milik sendiri + yang dia jadi atasan
+        $user = auth()->user();
+        if ($user->hasRole('karyawan')) {
+            $query->where('pegawai_id', $user->pegawai?->id);
+        } elseif ($user->hasRole('atasan')) {
+            $query->where(fn($q) =>
+                $q->where('pegawai_id', $user->pegawai?->id)
+                  ->orWhere('atasan_id', $user->id)
+            );
+        }
+
+        $list = $query->orderByDesc('created_at')->paginate(20)->withQueryString();
 
         // Badge: pending approval yang perlu tindakan user saat ini
         $pendingAtasan = TrainingEksternal::where('status', 'menunggu_atasan')->count();

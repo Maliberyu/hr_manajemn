@@ -23,7 +23,8 @@ class LemburController extends Controller
             ->when($request->q,      fn($q, $s) =>
                 $q->whereHas('pegawai', fn($p) => $p->where('nama', 'like', "%$s%")));
 
-        if (auth()->user()->hasRole('karyawan')) {
+        // Karyawan & atasan hanya lihat milik sendiri
+        if (auth()->user()->hasRole(['karyawan', 'atasan'])) {
             $query->where('pegawai_id', auth()->user()->pegawai?->id);
         }
 
@@ -38,7 +39,7 @@ class LemburController extends Controller
 
     public function create()
     {
-        if (auth()->user()->hasRole('karyawan')) {
+        if (auth()->user()->hasRole(['karyawan', 'atasan'])) {
             $pegawai = collect([auth()->user()->pegawai])->filter();
         } else {
             $pegawai = Pegawai::aktif()->orderBy('nama')->get(['id', 'nama', 'nik', 'jbtn', 'departemen']);

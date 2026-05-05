@@ -23,7 +23,8 @@ class CutiController extends Controller
             ->orderByDesc('tanggal')
             ->orderByDesc('id');
 
-        if (auth()->user()->hasRole('karyawan')) {
+        // Karyawan & atasan hanya lihat milik sendiri
+        if (auth()->user()->hasRole(['karyawan', 'atasan'])) {
             $query->where('nik', auth()->user()->pegawai->nik ?? '');
         }
 
@@ -38,8 +39,8 @@ class CutiController extends Controller
 
     public function create()
     {
-        $pegawai = auth()->user()->hasRole('karyawan')
-            ? collect([auth()->user()->pegawai])
+        $pegawai = auth()->user()->hasRole(['karyawan', 'atasan'])
+            ? collect([auth()->user()->pegawai])->filter()
             : Pegawai::aktif()->orderBy('nama')->get(['id', 'nama', 'nik', 'jbtn', 'cuti_diambil']);
 
         $pj = Pegawai::aktif()->orderBy('nama')->get(['id', 'nama', 'nik']);
