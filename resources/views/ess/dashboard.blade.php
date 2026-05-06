@@ -150,41 +150,88 @@
                  x-text="notif.msg"></div>
         </template>
 
-        {{-- Tombol check-in / check-out --}}
-        <div class="mt-4">
-        @if(!$absensiHariIni)
-        <button @click="doCheckIn()"
-                :disabled="!lokasiku || loading"
-                class="w-full py-4 rounded-2xl text-white font-bold text-base transition flex items-center justify-center gap-2"
-                :class="lokasiku && !loading ? 'bg-green-600 hover:bg-green-700 shadow-lg shadow-green-200' : 'bg-gray-200 text-gray-400 cursor-not-allowed'">
-            <span x-show="!loading" class="flex items-center gap-2">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"/></svg>
-                Check-In Sekarang
-            </span>
-            <span x-show="loading" class="flex items-center gap-2">
-                <svg class="w-5 h-5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
-                Memproses...
-            </span>
-        </button>
+        {{-- ═══════════════════════ KAMERA SELFIE ════════════════════════ --}}
+        @if(!$absensiHariIni || !$absensiHariIni->jam_keluar)
+        <div class="mt-4 bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
 
-        @elseif(!$absensiHariIni->jam_keluar)
-        <button @click="doCheckOut()"
-                :disabled="!lokasiku || loading"
-                class="w-full py-4 rounded-2xl text-white font-bold text-base transition flex items-center justify-center gap-2"
-                :class="lokasiku && !loading ? 'bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-200' : 'bg-gray-200 text-gray-400 cursor-not-allowed'">
-            <span x-show="!loading" class="flex items-center gap-2">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
-                Check-Out Sekarang
-            </span>
-            <span x-show="loading">Memproses...</span>
-        </button>
+            {{-- State: belum buka kamera --}}
+            <div x-show="!cameraState" class="p-4 text-center">
+                @if(!$absensiHariIni)
+                <p class="text-xs text-gray-400 mb-3">Foto selfie wajib untuk Check-In</p>
+                <button @click="bukaKamera()"
+                        :disabled="!lokasiku"
+                        class="w-full py-3 rounded-xl font-semibold text-sm transition flex items-center justify-center gap-2"
+                        :class="lokasiku ? 'bg-green-600 hover:bg-green-700 text-white' : 'bg-gray-100 text-gray-400 cursor-not-allowed'">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><circle cx="12" cy="13" r="3"/>
+                    </svg>
+                    <span x-text="lokasiku ? 'Ambil Foto & Check-In' : 'Ambil GPS dulu...'"></span>
+                </button>
+                @else
+                <p class="text-xs text-gray-400 mb-3">Foto selfie wajib untuk Check-Out</p>
+                <button @click="bukaKamera()"
+                        :disabled="!lokasiku"
+                        class="w-full py-3 rounded-xl font-semibold text-sm transition flex items-center justify-center gap-2"
+                        :class="lokasiku ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'bg-gray-100 text-gray-400 cursor-not-allowed'">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><circle cx="12" cy="13" r="3"/>
+                    </svg>
+                    <span x-text="lokasiku ? 'Ambil Foto & Check-Out' : 'Ambil GPS dulu...'"></span>
+                </button>
+                @endif
+                <p x-show="cameraError" class="mt-2 text-xs text-red-500" x-text="cameraError"></p>
+            </div>
 
+            {{-- State: live preview kamera --}}
+            <div x-show="cameraState === 'preview'" class="relative">
+                <video x-ref="video" autoplay playsinline muted
+                       class="w-full rounded-t-2xl bg-black"
+                       style="max-height:260px; object-fit:cover; transform:scaleX(-1)"></video>
+                <div class="p-3 flex items-center gap-2">
+                    <button @click="tutupKamera()"
+                            class="px-3 py-2 text-xs border border-gray-200 text-gray-600 rounded-xl hover:bg-gray-50 transition">
+                        Batal
+                    </button>
+                    <button @click="ambilFoto()"
+                            class="flex-1 py-2.5 text-sm font-semibold rounded-xl transition
+                                   {{ !$absensiHariIni ? 'bg-green-600 hover:bg-green-700' : 'bg-blue-600 hover:bg-blue-700' }} text-white flex items-center justify-center gap-2">
+                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                            <circle cx="12" cy="12" r="10" opacity=".3"/><circle cx="12" cy="12" r="5"/>
+                        </svg>
+                        Ambil Foto
+                    </button>
+                </div>
+            </div>
+
+            {{-- State: foto sudah diambil --}}
+            <div x-show="cameraState === 'captured'" class="relative">
+                <img :src="capturedFoto" class="w-full rounded-t-2xl object-cover"
+                     style="max-height:260px; transform:scaleX(-1)">
+                <div class="p-3 flex items-center gap-2">
+                    <button @click="bukaKamera()"
+                            class="px-3 py-2 text-xs border border-gray-200 text-gray-600 rounded-xl hover:bg-gray-50 transition">
+                        Ulangi
+                    </button>
+                    <button @click="{{ !$absensiHariIni ? 'doCheckIn()' : 'doCheckOut()' }}"
+                            :disabled="loading"
+                            class="flex-1 py-2.5 text-sm font-semibold rounded-xl transition text-white flex items-center justify-center gap-2
+                                   {{ !$absensiHariIni ? 'bg-green-600 hover:bg-green-700' : 'bg-blue-600 hover:bg-blue-700' }}"
+                            :class="loading ? 'opacity-60 cursor-not-allowed' : ''">
+                        <span x-show="!loading">
+                            ✓ {{ !$absensiHariIni ? 'Konfirmasi Check-In' : 'Konfirmasi Check-Out' }}
+                        </span>
+                        <span x-show="loading">Memproses...</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+        {{-- Canvas tersembunyi untuk capture --}}
+        <canvas x-ref="canvas" style="display:none"></canvas>
         @else
-        <div class="w-full py-4 rounded-2xl bg-gray-100 text-gray-500 font-semibold text-center text-sm">
+        <div class="mt-4 w-full py-4 rounded-2xl bg-gray-100 text-gray-500 font-semibold text-center text-sm">
             ✓ Absensi hari ini sudah selesai
         </div>
         @endif
-        </div>
 
     </div>{{-- end tab absensi --}}
 
@@ -523,17 +570,22 @@ const initialTab = '{{ request('tab', 'absensi') }}';
 
 function essPortal() {
     return {
-        tab:         initialTab,
-        lokasiku:    null,
-        jarakMeter:  0,
-        akurasi:     0,
+        tab:          initialTab,
+        lokasiku:     null,
+        jarakMeter:   0,
+        akurasi:      0,
         statusRadius: false,
-        loadingGps:  false,
-        loading:     false,
-        notif:       { msg: '', type: '' },
-        map:         null,
-        userMarker:  null,
-        userCircle:  null,
+        loadingGps:   false,
+        loading:      false,
+        notif:        { msg: '', type: '' },
+        map:          null,
+        userMarker:   null,
+        userCircle:   null,
+        // ── Kamera selfie ──────────────────────────────────────────────────────
+        cameraState:  null,    // null | 'preview' | 'captured'
+        videoStream:  null,
+        capturedFoto: null,    // base64 JPEG
+        cameraError:  null,
 
         init() {
             // Init peta hanya saat tab absensi aktif/visible
@@ -626,38 +678,86 @@ function essPortal() {
             );
         },
 
+        // ── Kamera ────────────────────────────────────────────────────────────
+        bukaKamera() {
+            this.cameraError  = null;
+            this.capturedFoto = null;
+            this.cameraState  = 'preview';
+            this.$nextTick(() => {
+                navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } }
+                })
+                .then(stream => {
+                    this.videoStream = stream;
+                    this.$refs.video.srcObject = stream;
+                })
+                .catch(err => {
+                    this.cameraState = null;
+                    this.cameraError = 'Kamera tidak bisa diakses: ' + err.message;
+                });
+            });
+        },
+
+        ambilFoto() {
+            const video  = this.$refs.video;
+            const canvas = this.$refs.canvas;
+            canvas.width  = video.videoWidth  || 640;
+            canvas.height = video.videoHeight || 480;
+            const ctx = canvas.getContext('2d');
+            // Mirror (sesuai tampilan selfie)
+            ctx.translate(canvas.width, 0);
+            ctx.scale(-1, 1);
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            this.capturedFoto = canvas.toDataURL('image/jpeg', 0.7);
+            this.cameraState  = 'captured';
+            this.tutupStream();
+        },
+
+        tutupKamera() {
+            this.tutupStream();
+            this.cameraState  = null;
+            this.capturedFoto = null;
+        },
+
+        tutupStream() {
+            if (this.videoStream) {
+                this.videoStream.getTracks().forEach(t => t.stop());
+                this.videoStream = null;
+            }
+        },
+
         doCheckIn() {
-            if (!this.lokasiku || this.loading) return;
+            if (!this.lokasiku || !this.capturedFoto || this.loading) return;
             this.loading = true;
             this.notif   = { msg: '', type: '' };
             fetch('{{ route('ess.checkin') }}', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json' },
-                body: JSON.stringify({ lat: this.lokasiku.lat, lng: this.lokasiku.lng }),
+                body: JSON.stringify({ lat: this.lokasiku.lat, lng: this.lokasiku.lng, foto: this.capturedFoto }),
             })
             .then(r => r.json().then(d => ({ ok: r.ok, data: d })))
             .then(({ ok, data }) => {
                 this.loading = false;
                 if (ok) { this.setNotif(data.message, 'success'); setTimeout(() => location.reload(), 1500); }
-                else    { this.setNotif(data.message || 'Gagal check-in.', 'error'); }
+                else    { this.cameraState = null; this.setNotif(data.message || 'Gagal check-in.', 'error'); }
             })
             .catch(() => { this.loading = false; this.setNotif('Terjadi kesalahan koneksi.', 'error'); });
         },
 
         doCheckOut() {
-            if (!this.lokasiku || this.loading) return;
+            if (!this.lokasiku || !this.capturedFoto || this.loading) return;
             this.loading = true;
             this.notif   = { msg: '', type: '' };
             fetch('{{ route('ess.checkout') }}', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json' },
-                body: JSON.stringify({ lat: this.lokasiku.lat, lng: this.lokasiku.lng }),
+                body: JSON.stringify({ lat: this.lokasiku.lat, lng: this.lokasiku.lng, foto: this.capturedFoto }),
             })
             .then(r => r.json().then(d => ({ ok: r.ok, data: d })))
             .then(({ ok, data }) => {
                 this.loading = false;
                 if (ok) { this.setNotif(data.message, 'success'); setTimeout(() => location.reload(), 1500); }
-                else    { this.setNotif(data.message || 'Gagal check-out.', 'error'); }
+                else    { this.cameraState = null; this.setNotif(data.message || 'Gagal check-out.', 'error'); }
             })
             .catch(() => { this.loading = false; this.setNotif('Terjadi kesalahan koneksi.', 'error'); });
         },

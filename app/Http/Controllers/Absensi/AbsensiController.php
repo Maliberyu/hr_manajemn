@@ -114,8 +114,9 @@ class AbsensiController extends Controller
         }
 
         $request->validate([
-            'lat' => 'required|numeric',
-            'lng' => 'required|numeric',
+            'lat'  => 'required|numeric',
+            'lng'  => 'required|numeric',
+            'foto' => 'required|string', // base64 image
         ]);
 
         // Validasi radius — cek apakah dalam jangkauan salah satu lokasi aktif
@@ -156,6 +157,12 @@ class AbsensiController extends Controller
             $jadwal
         );
 
+        // Simpan foto selfie check-in
+        $fotoPath = $this->simpanFotoBase64(
+            $request->foto,
+            "absensi/foto/" . now()->format('Ym') . "/{$pegawai->id}_masuk_" . now()->format('His') . ".jpg"
+        );
+
         Absensi::create([
             'pegawai_id'      => $pegawai->id,
             'tanggal'         => today(),
@@ -165,6 +172,7 @@ class AbsensiController extends Controller
             'metode'          => 'mobile',
             'lat_masuk'       => $request->lat,
             'lng_masuk'       => $request->lng,
+            'foto_masuk'      => $fotoPath,
             'lokasi_valid'    => $lokasiValid,
             'diinput_oleh'    => auth()->id(),
         ]);
@@ -189,8 +197,9 @@ class AbsensiController extends Controller
                           ->firstOrFail();
 
         $request->validate([
-            'lat' => 'required|numeric',
-            'lng' => 'required|numeric',
+            'lat'  => 'required|numeric',
+            'lng'  => 'required|numeric',
+            'foto' => 'required|string',
         ]);
 
         // Validasi radius check-out
@@ -215,10 +224,16 @@ class AbsensiController extends Controller
             ], 422);
         }
 
+        $fotoPath = $this->simpanFotoBase64(
+            $request->foto,
+            "absensi/foto/" . now()->format('Ym') . "/{$pegawai->id}_keluar_" . now()->format('His') . ".jpg"
+        );
+
         $absensi->update([
-            'jam_keluar' => now(),
-            'lat_keluar' => $request->lat,
-            'lng_keluar' => $request->lng,
+            'jam_keluar'  => now(),
+            'lat_keluar'  => $request->lat,
+            'lng_keluar'  => $request->lng,
+            'foto_keluar' => $fotoPath,
         ]);
 
         return response()->json([
@@ -343,6 +358,18 @@ class AbsensiController extends Controller
     }
 
     // ─── Private: hitung keterlambatan ───────────────────────────────────────
+
+    private function simpanFotoBase64(string $base64, string $path): ?string
+    {
+        try {
+            // Lepas prefix data:image/...;base64,
+            $imageData = base64_decode(preg_replace('#^data:image/\w+;base64,#i', '', $base64));
+            \Illuminate\Support\Facades\Storage::disk('public')->put($path, $imageData);
+            return $path;
+        } catch (\Throwable) {
+            return null;
+        }
+    }
 
     private function hitungKeterlambatan(string $jamMasuk, string $tanggal, ?JadwalPegawai $jadwal): int
     {

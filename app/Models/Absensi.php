@@ -25,6 +25,8 @@ class Absensi extends Model
         'lng_keluar',
         'keterangan',
         'diinput_oleh',     // user_id yang menginput (jika manual oleh HR)
+        'foto_masuk',       // path file foto selfie saat check-in
+        'foto_keluar',      // path file foto selfie saat check-out
     ];
 
     protected $casts = [
@@ -97,6 +99,16 @@ class Absensi extends Model
         $jam  = intdiv($this->terlambat_menit, 60);
         $mnt  = $this->terlambat_menit % 60;
         return $jam > 0 ? "{$jam}j {$mnt}m" : "{$mnt}m";
+    }
+
+    public function getFotoMasukUrlAttribute(): ?string
+    {
+        return $this->foto_masuk ? \Illuminate\Support\Facades\Storage::url($this->foto_masuk) : null;
+    }
+
+    public function getFotoKeluarUrlAttribute(): ?string
+    {
+        return $this->foto_keluar ? \Illuminate\Support\Facades\Storage::url($this->foto_keluar) : null;
     }
 
     // ─── Relasi ────────────────────────────────────────────────────────────────
