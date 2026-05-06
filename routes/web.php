@@ -19,6 +19,7 @@ use App\Http\Controllers\Training\TrainingEksternalController;
 use App\Http\Controllers\Login\LoginController;
 use App\Http\Controllers\Register\RegisterController;
 use App\Http\Controllers\Pengaturan\UserController;
+use App\Http\Controllers\Pengaturan\AtasanPegawaiController;
 
 // ─── Redirect root ──────────────────────────────────────────────────────────────
 Route::get('/', fn() => redirect()->route('dashboard'));
@@ -254,3 +255,14 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
         Route::delete('/{user}',              [UserController::class, 'destroy'])->name('destroy');
     });
 });
+
+// ── Setting Atasan (HRD & Admin) ───────────────────────────────────────────────
+Route::middleware(['auth', 'role:hrd,admin'])
+    ->prefix('pengaturan/atasan')
+    ->name('pengaturan.atasan.')
+    ->group(function () {
+        Route::get('/',        [AtasanPegawaiController::class, 'index'])->name('index');
+        Route::post('/',       [AtasanPegawaiController::class, 'store'])->name('store');
+        Route::post('/bulk',   [AtasanPegawaiController::class, 'storeBulk'])->name('bulk');
+        Route::delete('/',     [AtasanPegawaiController::class, 'destroy'])->name('destroy');
+    });

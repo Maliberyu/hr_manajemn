@@ -257,12 +257,35 @@
         </div>
     </div>
 
-    {{-- Admin only --}}
-    @if($isAdmin)
-    <div class="pt-3 mt-3 border-t border-blue-800">
+    {{-- Pengaturan: Atasan (HRD & Admin) --}}
+    @php
+        $atasanBelumSet = \App\Models\Pegawai::aktif()->whereDoesntHave('atasanRecord')->count();
+        $atasanActive   = request()->routeIs('pengaturan.atasan.*');
+    @endphp
+    <div class="pt-3 mt-3 border-t border-blue-800 space-y-0.5">
+        <p x-show="sidebarOpen" class="px-3 mb-1 text-[10px] uppercase tracking-wider text-blue-400">Pengaturan</p>
+        <a href="{{ route('pengaturan.atasan.index') }}"
+           class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition group
+                  {{ $atasanActive ? 'bg-blue-500/30 text-white' : 'text-blue-200 hover:bg-blue-800/50 hover:text-white' }}">
+            <svg class="w-5 h-5 flex-shrink-0 {{ $atasanActive ? 'text-blue-300' : 'text-blue-400 group-hover:text-blue-200' }}"
+                 fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
+                      d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
+            </svg>
+            <span x-show="sidebarOpen" class="flex-1">Atasan Langsung</span>
+            @if($atasanBelumSet > 0)
+            <span x-show="sidebarOpen"
+                  class="px-1.5 py-0.5 text-xs bg-orange-400 text-white rounded-full font-bold">
+                {{ $atasanBelumSet }}
+            </span>
+            @endif
+        </a>
+
+        {{-- Admin only --}}
+        @if($isAdmin)
         {!! navLink('Manajemen User', 'pengaturan.users.index', 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z') !!}
+        @endif
     </div>
-    @endif
 @endif
 
         </nav>

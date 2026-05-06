@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use App\Models\AtasanPegawai;
 
 class PengajuanCuti extends Model
 {
@@ -88,12 +89,18 @@ class PengajuanCuti extends Model
 
     public function bisaApproveAtasan(): bool
     {
-        return $this->status === 'Menunggu Atasan';
+        if ($this->status !== 'Menunggu Atasan') return false;
+        $user = auth()->user();
+        if ($user->hasRole(['hrd', 'admin'])) return true;
+        if (!$user->hasRole('atasan')) return false;
+        $nik = $this->nik ?? $this->pegawai?->nik;
+        return $nik && AtasanPegawai::isAtasanDari($user->id, $nik);
     }
 
     public function bisaApproveHrd(): bool
     {
-        return $this->status === 'Menunggu HRD';
+        return $this->status === 'Menunggu HRD'
+            && auth()->user()->hasRole(['hrd', 'admin']);
     }
 
     public function ditolak(): bool

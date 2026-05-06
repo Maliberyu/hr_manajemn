@@ -218,4 +218,20 @@ class Pegawai extends Model
     {
         return $this->hasOne(User::class, 'pegawai_id', 'id');
     }
+
+    // ── Atasan langsung (dari hr_atasan_pegawai) ───────────────────────────────
+    public function atasanRecord(): HasOne
+    {
+        return $this->hasOne(AtasanPegawai::class, 'nik', 'nik');
+    }
+
+    public function atasanLangsung(): \Illuminate\Database\Eloquent\Relations\HasOneThrough
+    {
+        return $this->hasOneThrough(User::class, AtasanPegawai::class, 'nik', 'id', 'nik', 'user_id');
+    }
+
+    public function sudahAdaAtasan(): bool
+    {
+        return AtasanPegawai::where('nik', $this->nik)->exists();
+    }
 }

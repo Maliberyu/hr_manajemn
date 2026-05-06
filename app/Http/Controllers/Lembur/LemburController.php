@@ -23,9 +23,16 @@ class LemburController extends Controller
             ->when($request->q,      fn($q, $s) =>
                 $q->whereHas('pegawai', fn($p) => $p->where('nama', 'like', "%$s%")));
 
-        // Karyawan & atasan hanya lihat milik sendiri
-        if (auth()->user()->hasRole(['karyawan', 'atasan'])) {
-            $query->where('pegawai_id', auth()->user()->pegawai?->id);
+        $user = auth()->user();
+        if ($user->hasRole('karyawan')) {
+            $query->where('pegawai_id', $user->pegawai?->id);
+        } elseif ($user->hasRole('atasan')) {
+            // Atasan lihat milik sendiri + semua bawahannya
+            $nikBawahan  = \App\Models\AtasanPegawai::nikBawahan($user->id);
+            $nikSendiri  = $user->pegawai?->nik ?? '';
+            $semuaNik    = array_filter(array_merge([$nikSendiri], $nikBawahan));
+            $pegawaiIds  = \App\Models\Pegawai::whereIn('nik', $semuaNik)->pluck('id');
+            $query->whereIn('pegawai_id', $pegawaiIds);
         }
 
         $lembur        = $query->orderByDesc('tanggal')->paginate(25)->withQueryString();
@@ -73,15 +80,20 @@ class LemburController extends Controller
             ? ($tarif?->tarif_hr ?? 0)
             : ($tarif?->tarif_hb ?? 0));
 
+        // Jika atasan belum di-mapping → langsung ke HRD
+        $adaAtasan  = $peg?->nik ? \App\Models\AtasanPegawai::where('nik', $peg->nik)->exists() : false;
+        $statusAwal = $adaAtasan ? 'Menunggu Atasan' : 'Menunggu HRD';
+
         Lembur::create([
             ...$validated,
             'durasi_jam' => round($durasi, 2),
             'nominal'    => $nominal,
-            'status'     => 'Menunggu Atasan',
+            'status'     => $statusAwal,
         ]);
 
+        $pesanStatus = $adaAtasan ? '' : ' Atasan langsung belum diset — langsung ke HRD.';
         return redirect()->route('lembur.index')
-            ->with('success', "Pengajuan lembur berhasil disimpan. Estimasi nominal: Rp " . number_format($nominal, 0, ',', '.'));
+            ->with('success', "Pengajuan lembur berhasil disimpan. Estimasi: Rp " . number_format($nominal, 0, ',', '.') . $pesanStatus);
     }
 
     // ─── Detail ───────────────────────────────────────────────────────────────

@@ -6,6 +6,27 @@
 
 @section('content')
 
+{{-- Notif: karyawan belum ada atasan --}}
+@if(($pegawaiBelumAdaAtasan ?? 0) > 0)
+<div class="mb-4 px-4 py-3 bg-orange-50 border border-orange-200 rounded-2xl flex items-center justify-between">
+    <div class="flex items-center gap-3">
+        <span class="text-orange-400 text-lg">⚠️</span>
+        <div>
+            <p class="text-sm font-semibold text-orange-800">
+                {{ $pegawaiBelumAdaAtasan }} karyawan aktif belum memiliki atasan langsung
+            </p>
+            <p class="text-xs text-orange-600 mt-0.5">
+                Pengajuan cuti & lembur mereka akan langsung masuk ke HRD.
+            </p>
+        </div>
+    </div>
+    <a href="{{ route('pengaturan.atasan.index', ['belum_diset' => 1]) }}"
+       class="flex-shrink-0 px-3 py-1.5 text-xs bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition font-medium">
+        Setting Sekarang
+    </a>
+</div>
+@endif
+
 {{-- ═══════════════════════════════════════════════════════════════ --}}
 {{-- STATS CARDS --}}
 {{-- ═══════════════════════════════════════════════════════════════ --}}
@@ -114,7 +135,7 @@
     {{-- Ulang Tahun --}}
     <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
         <div class="flex items-center gap-2 mb-4">
-            <span class="text-lg">🎂</span>
+            <span class="text-lg"></span>
             <div>
                 <h3 class="text-sm font-semibold text-gray-800">Ulang Tahun Bulan Ini</h3>
                 <p class="text-xs text-gray-400">{{ now()->translatedFormat('F Y') }}</p>

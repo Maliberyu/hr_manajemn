@@ -77,9 +77,18 @@ class DashboardController extends Controller
             'alfa'      => 0,
         ]));
 
+        // Notif: karyawan aktif yang belum punya mapping atasan
+        $pegawaiBelumAdaAtasan = $this->safe(
+            fn() => \App\Models\Pegawai::aktif()
+                ->whereDoesntHave('atasanRecord')
+                ->count(),
+            0
+        );
+
         return view('dashboard', compact(
             'stats', 'absensiHariIni', 'cutiTerbaru',
-            'lemburMenunggu', 'ultah', 'grafikAbsensi'
+            'lemburMenunggu', 'ultah', 'grafikAbsensi',
+            'pegawaiBelumAdaAtasan'
         ));
     }
 

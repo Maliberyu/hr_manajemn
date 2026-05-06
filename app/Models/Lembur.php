@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use App\Models\AtasanPegawai;
 
 class Lembur extends Model
 {
@@ -78,8 +79,12 @@ class Lembur extends Model
 
     public function bisaApproveAtasan(): bool
     {
-        return $this->status === 'Menunggu Atasan'
-            && auth()->user()->hasRole(['atasan', 'hrd', 'admin']);
+        if ($this->status !== 'Menunggu Atasan') return false;
+        $user = auth()->user();
+        if ($user->hasRole(['hrd', 'admin'])) return true;
+        if (!$user->hasRole('atasan')) return false;
+        $nik = $this->pegawai?->nik;
+        return $nik && AtasanPegawai::isAtasanDari($user->id, $nik);
     }
 
     public function bisaApproveHrd(): bool

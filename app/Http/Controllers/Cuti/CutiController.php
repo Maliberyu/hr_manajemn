@@ -23,9 +23,16 @@ class CutiController extends Controller
             ->orderByDesc('tanggal')
             ->orderByDesc('id');
 
-        // Karyawan & atasan hanya lihat milik sendiri
-        if (auth()->user()->hasRole(['karyawan', 'atasan'])) {
-            $query->where('nik', auth()->user()->pegawai->nik ?? '');
+        $user = auth()->user();
+        if ($user->hasRole('karyawan')) {
+            // Karyawan hanya lihat milik sendiri
+            $query->where('nik', $user->pegawai->nik ?? '');
+        } elseif ($user->hasRole('atasan')) {
+            // Atasan lihat milik sendiri + semua bawahannya
+            $nikBawahan = \App\Models\AtasanPegawai::nikBawahan($user->id);
+            $nikSendiri = $user->pegawai?->nik ?? '';
+            $semua      = array_filter(array_merge([$nikSendiri], $nikBawahan));
+            $query->whereIn('nik', $semua);
         }
 
         $pengajuan   = $query->paginate(20)->withQueryString();
@@ -79,16 +86,24 @@ class CutiController extends Controller
 
         $noPengajuan = $this->generateNomor();
 
+        // Tentukan status awal: jika atasan belum di-mapping → langsung ke HRD
+        $adaAtasan = \App\Models\AtasanPegawai::where('nik', $validated['nik'])->exists();
+        $statusAwal = $adaAtasan ? 'Menunggu Atasan' : 'Menunggu HRD';
+
         PengajuanCuti::create([
             ...$validated,
             'no_pengajuan' => $noPengajuan,
             'tanggal'      => today(),
             'jumlah'       => $jumlah,
-            'status'       => 'Menunggu Atasan',
+            'status'       => $statusAwal,
         ]);
 
+        $pesanStatus = $adaAtasan
+            ? "Menunggu persetujuan atasan langsung."
+            : "Atasan langsung belum diset — pengajuan langsung diteruskan ke HRD.";
+
         return redirect()->route('cuti.index')
-            ->with('success', "Pengajuan {$noPengajuan} berhasil diajukan ({$jumlah} hari kerja). Menunggu persetujuan atasan langsung.");
+            ->with('success', "Pengajuan {$noPengajuan} berhasil diajukan ({$jumlah} hari kerja). {$pesanStatus}");
     }
 
     // ─── Detail ───────────────────────────────────────────────────────────────
