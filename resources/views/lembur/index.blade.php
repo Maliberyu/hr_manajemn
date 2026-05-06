@@ -3,6 +3,10 @@
 @section('page-title', 'Manajemen Lembur')
 @section('page-subtitle', 'Pengajuan dan persetujuan lembur karyawan')
 
+@push('styles')
+<style>[x-cloak]{display:none!important}</style>
+@endpush
+
 @section('content')
 <div class="space-y-4">
 
@@ -120,7 +124,7 @@
                             default  => 'bg-gray-100 text-gray-600',
                         };
                     @endphp
-                    <tr class="hover:bg-gray-50/50 transition">
+                    <tr class="hover:bg-gray-50/50 transition" x-data="{ tolakOpen: false, level: '' }">
                         <td class="px-4 py-3">
                             <div class="font-medium text-gray-800">{{ $l->pegawai?->nama ?? '-' }}</div>
                             <div class="text-xs text-gray-400">{{ $l->pegawai?->jbtn }}</div>
@@ -148,11 +152,73 @@
                                 {{ $l->status }}
                             </span>
                         </td>
-                        <td class="px-4 py-3 text-center">
-                            <a href="{{ route('lembur.show', $l) }}"
-                               class="px-3 py-1 text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition">
-                                Detail
-                            </a>
+                        <td class="px-4 py-3">
+                            <div class="flex items-center justify-center gap-1.5 flex-wrap">
+                                {{-- ACC & Tolak Atasan --}}
+                                @if($l->bisaApproveAtasan())
+                                <form method="POST" action="{{ route('lembur.approve.atasan', $l) }}">
+                                    @csrf
+                                    <button type="submit"
+                                            class="px-2.5 py-1 text-xs bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition">
+                                        ✓ ACC
+                                    </button>
+                                </form>
+                                <button type="button"
+                                        @click="tolakOpen = !tolakOpen; level = 'atasan'"
+                                        class="px-2.5 py-1 text-xs bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 rounded-lg font-medium transition">
+                                    ✗ Tolak
+                                </button>
+                                @endif
+
+                                {{-- ACC & Tolak HRD --}}
+                                @if($l->bisaApproveHrd())
+                                <form method="POST" action="{{ route('lembur.approve.hrd', $l) }}">
+                                    @csrf
+                                    <button type="submit"
+                                            class="px-2.5 py-1 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition">
+                                        ✓ ACC HRD
+                                    </button>
+                                </form>
+                                <button type="button"
+                                        @click="tolakOpen = !tolakOpen; level = 'hrd'"
+                                        class="px-2.5 py-1 text-xs bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 rounded-lg font-medium transition">
+                                    ✗ Tolak
+                                </button>
+                                @endif
+
+                                <a href="{{ route('lembur.show', $l) }}"
+                                   class="px-2.5 py-1 text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition">
+                                    Detail
+                                </a>
+                            </div>
+
+                            {{-- Form tolak inline --}}
+                            <div x-show="tolakOpen" x-cloak class="mt-2">
+                                <form method="POST"
+                                      :action="level === 'atasan'
+                                          ? '{{ route('lembur.approve.atasan', $l) }}'
+                                          : '{{ route('lembur.approve.hrd', $l) }}'">
+                                    @csrf
+                                    {{-- Gunakan hidden field untuk override ke tolak --}}
+                                    <input type="hidden" name="_tolak" value="1">
+                                    <div x-show="level === 'atasan'">
+                                        <input type="hidden" name="_route_tolak_atasan"
+                                               value="{{ route('lembur.tolak.atasan', $l) }}">
+                                    </div>
+                                    <div class="flex gap-1.5 items-end">
+                                        <textarea :name="level === 'atasan' ? 'catatan_atasan' : 'catatan_hrd'"
+                                                  rows="2" required placeholder="Alasan penolakan..."
+                                                  class="flex-1 px-2 py-1 text-xs border border-red-200 rounded-lg focus:outline-none resize-none"></textarea>
+                                        <button type="submit"
+                                                :formaction="level === 'atasan'
+                                                    ? '{{ route('lembur.tolak.atasan', $l) }}'
+                                                    : '{{ route('lembur.tolak.hrd', $l) }}'"
+                                                class="px-3 py-1.5 text-xs bg-red-600 text-white rounded-lg hover:bg-red-700 transition flex-shrink-0">
+                                            Kirim
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
                         </td>
                     </tr>
                     @empty
