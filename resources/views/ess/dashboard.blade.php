@@ -894,7 +894,7 @@ function essPortal() {
             if (!this.lokasiku || !this.capturedFoto || this.loading) return;
             this.loading = true;
             this.notif   = { msg: '', type: '' };
-            fetch('{{ route('ess.checkin') }}', {
+            fetch('{{ parse_url(route('ess.checkin'), PHP_URL_PATH) }}', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json' },
                 body: JSON.stringify({ lat: this.lokasiku.lat, lng: this.lokasiku.lng, foto: this.capturedFoto }),
@@ -912,7 +912,7 @@ function essPortal() {
             if (!this.lokasiku || !this.capturedFoto || this.loading) return;
             this.loading = true;
             this.notif   = { msg: '', type: '' };
-            fetch('{{ route('ess.checkout') }}', {
+            fetch('{{ parse_url(route('ess.checkout'), PHP_URL_PATH) }}', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json' },
                 body: JSON.stringify({ lat: this.lokasiku.lat, lng: this.lokasiku.lng, foto: this.capturedFoto }),
