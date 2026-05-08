@@ -25,7 +25,7 @@
             <h3 class="text-sm font-semibold text-gray-700 mb-4" x-text="editId ? 'Edit Lokasi' : 'Tambah Lokasi Baru'"></h3>
 
             <form method="POST"
-                  :action="editId ? '{{ route('absensi.lokasi.update', ':id') }}'.replace(':id', editId) : '{{ route('absensi.lokasi.store') }}'"
+                  :action="editId ? '{{ parse_url(route('absensi.lokasi.update', ':id'), PHP_URL_PATH) }}'.replace(':id', editId) : '{{ parse_url(route('absensi.lokasi.store'), PHP_URL_PATH) }}'"
                   class="space-y-3">
                 @csrf
                 <input type="hidden" name="_method" :value="editId ? 'PUT' : 'POST'">
@@ -131,7 +131,7 @@
                     </div>
                     <div class="flex items-center gap-1 flex-shrink-0">
                         {{-- Toggle aktif --}}
-                        <form method="POST" action="{{ route('absensi.lokasi.toggle', $l) }}">
+                        <form method="POST" action="{{ parse_url(route('absensi.lokasi.toggle', $l), PHP_URL_PATH) }}">
                             @csrf @method('PATCH')
                             <button type="submit" title="{{ $l->aktif ? 'Nonaktifkan' : 'Aktifkan' }}"
                                     class="p-1.5 rounded-lg {{ $l->aktif ? 'text-green-600 hover:bg-green-50' : 'text-gray-400 hover:bg-gray-100' }} transition">
@@ -147,7 +147,7 @@
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
                         </button>
                         {{-- Hapus --}}
-                        <form method="POST" action="{{ route('absensi.lokasi.destroy', $l) }}"
+                        <form method="POST" action="{{ parse_url(route('absensi.lokasi.destroy', $l), PHP_URL_PATH) }}"
                               onsubmit="return confirm('Hapus lokasi ini?')">
                             @csrf @method('DELETE')
                             <button type="submit" class="p-1.5 text-red-400 hover:bg-red-50 rounded-lg transition">
