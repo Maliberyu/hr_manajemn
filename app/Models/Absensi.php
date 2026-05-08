@@ -27,6 +27,7 @@ class Absensi extends Model
         'diinput_oleh',     // user_id yang menginput (jika manual oleh HR)
         'foto_masuk',       // path file foto selfie saat check-in
         'foto_keluar',      // path file foto selfie saat check-out
+        'lokasi_valid',     // apakah check-in dalam radius lokasi kantor
     ];
 
     protected $casts = [
@@ -103,12 +104,12 @@ class Absensi extends Model
 
     public function getFotoMasukUrlAttribute(): ?string
     {
-        return $this->foto_masuk ? \Illuminate\Support\Facades\Storage::url($this->foto_masuk) : null;
+        return $this->foto_masuk ? \Illuminate\Support\Facades\Storage::disk('public')->url($this->foto_masuk) : null;
     }
 
     public function getFotoKeluarUrlAttribute(): ?string
     {
-        return $this->foto_keluar ? \Illuminate\Support\Facades\Storage::url($this->foto_keluar) : null;
+        return $this->foto_keluar ? \Illuminate\Support\Facades\Storage::disk('public')->url($this->foto_keluar) : null;
     }
 
     // ─── Relasi ────────────────────────────────────────────────────────────────

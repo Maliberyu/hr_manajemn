@@ -588,9 +588,8 @@ function essPortal() {
         cameraError:  null,
 
         init() {
-            // Init peta hanya saat tab absensi aktif/visible
             this.$nextTick(() => {
-                this.initMap();
+                try { this.initMap(); } catch (e) { console.warn('Map init gagal:', e); }
                 if (this.tab === 'absensi') {
                     this.ambilLokasi();
                 }
