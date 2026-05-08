@@ -60,7 +60,7 @@
                 </div>
 
                 <p class="text-xs text-blue-600 cursor-pointer hover:underline" @click="getMyLocation()">
-                    📍 Gunakan lokasi saya sekarang
+                     Gunakan lokasi saya sekarang
                 </p>
 
                 <div>
@@ -91,7 +91,7 @@
 
         {{-- Panduan --}}
         <div class="bg-blue-50 rounded-2xl border border-blue-100 p-4 text-xs text-blue-700 space-y-1">
-            <p class="font-semibold">💡 Cara set koordinat</p>
+            <p class="font-semibold"> Cara set koordinat</p>
             <p>1. Klik tombol "Gunakan lokasi saya" di atas</p>
             <p>2. Atau klik titik di peta → koordinat terisi otomatis</p>
             <p>3. Geser slider untuk atur radius (lingkaran biru di peta)</p>
