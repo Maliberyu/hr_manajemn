@@ -45,6 +45,7 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/ess/checkin',   [AbsensiController::class,   'checkIn'])->name('ess.checkin');
     Route::post('/ess/checkout',  [AbsensiController::class,   'checkOut'])->name('ess.checkout');
     Route::post('/ess/cuti',      [DashboardController::class, 'essStoreCuti'])->name('ess.cuti.store');
+    Route::get('/ess/payroll/{slip}/pdf', [DashboardController::class, 'essSlipPdf'])->name('ess.payroll.pdf');
 
     // ── Cuti — semua role (karyawan submit, atasan/hrd approve; controller filter) ─
     Route::prefix('cuti')->name('cuti.')->group(function () {

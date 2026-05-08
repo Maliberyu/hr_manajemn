@@ -24,6 +24,6 @@ class TrainingSetting extends Model
     public static function logoUrl(): ?string
     {
         $path = static::get('logo_rs');
-        return $path ? Storage::url($path) : null;
+        return $path ? Storage::disk('public')->url($path) : null;
     }
 }

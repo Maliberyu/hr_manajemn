@@ -9,6 +9,8 @@ use App\Models\Lembur;
 use App\Models\Rekrutmen;
 use App\Models\IHTPeserta;
 use App\Models\TrainingEksternal;
+use App\Models\SlipGaji;
+use App\Models\AtasanPegawai;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -22,73 +24,96 @@ class DashboardController extends Controller
             return redirect()->route('ess.dashboard');
         }
 
+        $isAtasan    = auth()->user()->hasRole('atasan');
+        $nikBawahan  = [];
+        $pegawaiIds  = [];
+
+        if ($isAtasan) {
+            $nikBawahan = AtasanPegawai::nikBawahan(auth()->id());
+            $pegawaiIds = $this->safe(
+                fn() => Pegawai::whereIn('nik', $nikBawahan)->pluck('id')->toArray(),
+                []
+            );
+        }
+
         $stats = [
-            'total_pegawai'     => $this->safe(fn() => Pegawai::aktif()->count()),
-            'hadir_hari_ini'    => $this->safe(fn() => Absensi::hariIni()->where('status', 'hadir')->count()),
-            'terlambat_hari'    => $this->safe(fn() => Absensi::hariIni()->terlambat()->count()),
-            'cuti_menunggu'     => $this->safe(fn() => PengajuanCuti::menungguApproval()->count()),
-            'lembur_menunggu'   => $this->safe(fn() => Lembur::menungguApproval()->count()),
+            'total_pegawai'     => $this->safe(fn() => $isAtasan
+                ? Pegawai::aktif()->whereIn('nik', $nikBawahan)->count()
+                : Pegawai::aktif()->count()),
+
+            'hadir_hari_ini'    => $this->safe(fn() => $isAtasan
+                ? Absensi::hariIni()->where('status', 'hadir')->whereIn('pegawai_id', $pegawaiIds)->count()
+                : Absensi::hariIni()->where('status', 'hadir')->count()),
+
+            'terlambat_hari'    => $this->safe(fn() => $isAtasan
+                ? Absensi::hariIni()->terlambat()->whereIn('pegawai_id', $pegawaiIds)->count()
+                : Absensi::hariIni()->terlambat()->count()),
+
+            'cuti_menunggu'     => $this->safe(fn() => $isAtasan
+                ? PengajuanCuti::menungguApproval()->whereIn('nik', $nikBawahan)->count()
+                : PengajuanCuti::menungguApproval()->count()),
+
+            'lembur_menunggu'   => $this->safe(fn() => $isAtasan
+                ? Lembur::menungguApproval()->whereIn('pegawai_id', $pegawaiIds)->count()
+                : Lembur::menungguApproval()->count()),
+
             'lowongan_buka'     => $this->safe(fn() => Rekrutmen::buka()->count()),
             'training_berjalan' => $this->safe(fn() => \App\Models\IHT::where('status', 'aktif')->count()),
         ];
 
-        $absensiHariIni = $this->safe(function () {
-            return Absensi::hariIni()
-                ->selectRaw('status, count(*) as total')
-                ->groupBy('status')
-                ->pluck('total', 'status');
+        $absensiHariIni = $this->safe(function () use ($isAtasan, $pegawaiIds) {
+            $q = Absensi::hariIni();
+            if ($isAtasan) $q->whereIn('pegawai_id', $pegawaiIds);
+            return $q->selectRaw('status, count(*) as total')
+                     ->groupBy('status')
+                     ->pluck('total', 'status');
         }, collect());
 
-        $cutiTerbaru = $this->safe(function () {
-            return PengajuanCuti::with('pegawai')
-                ->menungguApproval()
-                ->latest('tanggal')
-                ->limit(5)->get();
+        $cutiTerbaru = $this->safe(function () use ($isAtasan, $nikBawahan) {
+            $q = PengajuanCuti::with('pegawai')->menungguApproval()->latest('tanggal');
+            if ($isAtasan) $q->whereIn('nik', $nikBawahan);
+            return $q->limit(5)->get();
         }, collect());
 
-        $lemburMenunggu = $this->safe(function () {
-            return Lembur::with('pegawai')
-                ->menungguApproval()
-                ->latest('tanggal')
-                ->limit(5)->get();
+        $lemburMenunggu = $this->safe(function () use ($isAtasan, $pegawaiIds) {
+            $q = Lembur::with('pegawai')->menungguApproval()->latest('tanggal');
+            if ($isAtasan) $q->whereIn('pegawai_id', $pegawaiIds);
+            return $q->limit(5)->get();
         }, collect());
 
-        $ultah = $this->safe(function () {
-            return Pegawai::aktif()
-                ->whereMonth('tgl_lahir', now()->month)
-                ->orderByRaw('DAY(tgl_lahir)')
-                ->limit(10)->get(['nama', 'jbtn', 'tgl_lahir', 'photo']);
+        $ultah = $this->safe(function () use ($isAtasan, $nikBawahan) {
+            $q = Pegawai::aktif()->whereMonth('tgl_lahir', now()->month)->orderByRaw('DAY(tgl_lahir)');
+            if ($isAtasan) $q->whereIn('nik', $nikBawahan);
+            return $q->limit(10)->get(['nama', 'jbtn', 'tgl_lahir', 'photo']);
         }, collect());
 
-        $grafikAbsensi = $this->safe(function () {
-            return collect(range(6, 0))->map(function ($daysAgo) {
+        $grafikAbsensi = $this->safe(function () use ($isAtasan, $pegawaiIds) {
+            return collect(range(6, 0))->map(function ($daysAgo) use ($isAtasan, $pegawaiIds) {
                 $tgl = now()->subDays($daysAgo);
+                $base = fn() => $isAtasan
+                    ? Absensi::whereDate('tanggal', $tgl)->whereIn('pegawai_id', $pegawaiIds)
+                    : Absensi::whereDate('tanggal', $tgl);
                 return [
                     'label'     => $tgl->locale('id')->isoFormat('ddd, D MMM'),
-                    'hadir'     => Absensi::whereDate('tanggal', $tgl)->where('status', 'hadir')->count(),
-                    'terlambat' => Absensi::whereDate('tanggal', $tgl)->terlambat()->count(),
-                    'alfa'      => Absensi::whereDate('tanggal', $tgl)->where('status', 'alfa')->count(),
+                    'hadir'     => (clone $base())->where('status', 'hadir')->count(),
+                    'terlambat' => (clone $base())->terlambat()->count(),
+                    'alfa'      => (clone $base())->where('status', 'alfa')->count(),
                 ];
             });
         }, collect(range(6, 0))->map(fn($i) => [
             'label'     => now()->subDays($i)->locale('id')->isoFormat('ddd, D MMM'),
-            'hadir'     => 0,
-            'terlambat' => 0,
-            'alfa'      => 0,
+            'hadir'     => 0, 'terlambat' => 0, 'alfa' => 0,
         ]));
 
-        // Notif: karyawan aktif yang belum punya mapping atasan
         $pegawaiBelumAdaAtasan = $this->safe(
-            fn() => \App\Models\Pegawai::aktif()
-                ->whereDoesntHave('atasanRecord')
-                ->count(),
+            fn() => $isAtasan ? 0 : Pegawai::aktif()->whereDoesntHave('atasanRecord')->count(),
             0
         );
 
         return view('dashboard', compact(
             'stats', 'absensiHariIni', 'cutiTerbaru',
             'lemburMenunggu', 'ultah', 'grafikAbsensi',
-            'pegawaiBelumAdaAtasan'
+            'pegawaiBelumAdaAtasan', 'isAtasan', 'nikBawahan'
         ));
     }
 
@@ -152,10 +177,37 @@ class DashboardController extends Controller
             0
         );
 
+        $slipGaji = $this->safe(
+            fn() => SlipGaji::where('pegawai_id', $pegawai->id)
+                ->final()
+                ->with('komponenSlip')
+                ->orderByDesc('tahun')
+                ->orderByDesc('bulan')
+                ->get(),
+            collect()
+        );
+
         return view('ess.dashboard', compact(
             'pegawai', 'absensiHariIni', 'cutiSaya', 'sisaCuti', 'pegawaiPj',
-            'trainingIHT', 'trainingEksternal', 'expiringSoon'
+            'trainingIHT', 'trainingEksternal', 'expiringSoon', 'slipGaji'
         ));
+    }
+
+    public function essSlipPdf(SlipGaji $slip)
+    {
+        $pegawai = auth()->user()->pegawai;
+        abort_if(!$pegawai || $slip->pegawai_id !== $pegawai->id, 403, 'Slip ini bukan milik Anda.');
+
+        $slip->load(['pegawai.departemenRef', 'pegawai.payrollSetting', 'komponenSlip']);
+
+        if (class_exists(\Barryvdh\DomPDF\Facade\Pdf::class)) {
+            $pdf  = \Barryvdh\DomPDF\Facade\Pdf::loadView('payroll.pdf.slip', compact('slip'))
+                      ->setPaper('a5', 'landscape');
+            $nama = str_replace(' ', '_', $slip->pegawai?->nama ?? 'slip');
+            return $pdf->download("SlipGaji_{$nama}_{$slip->bulan}_{$slip->tahun}.pdf");
+        }
+
+        return view('payroll.pdf.slip', compact('slip'));
     }
 
     public function essStoreCuti(Request $request)

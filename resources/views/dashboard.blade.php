@@ -6,6 +6,25 @@
 
 @section('content')
 
+{{-- Banner: atasan mode — data dibatasi ke bawahan langsung --}}
+@if($isAtasan ?? false)
+<div class="mb-4 px-4 py-3 bg-blue-50 border border-blue-200 rounded-2xl flex items-center gap-3">
+    <svg class="w-5 h-5 text-blue-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
+    </svg>
+    <div>
+        <p class="text-sm font-semibold text-blue-800">Data bawahan langsung Anda</p>
+        <p class="text-xs text-blue-600 mt-0.5">
+            Menampilkan data {{ count($nikBawahan ?? []) }} karyawan yang menjadi tanggung jawab Anda.
+            @if(empty($nikBawahan))
+                <span class="font-semibold text-orange-600">Belum ada bawahan yang di-mapping.</span>
+            @endif
+        </p>
+    </div>
+</div>
+@endif
+
 {{-- Notif: karyawan belum ada atasan --}}
 @if(($pegawaiBelumAdaAtasan ?? 0) > 0)
 <div class="mb-4 px-4 py-3 bg-orange-50 border border-orange-200 rounded-2xl flex items-center justify-between">

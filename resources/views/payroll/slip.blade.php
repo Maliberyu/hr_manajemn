@@ -157,57 +157,57 @@
                 </p>
             </div>
         </div>
+    </form>{{-- tutup form edit komponen --}}
 
-        {{-- Action buttons --}}
-        <div class="flex flex-wrap gap-2 mt-3">
-            @if($slip->status === 'draft')
-            {{-- Edit mode toggle --}}
-            <button type="button" @click="editMode = !editMode"
-                    :class="editMode ? 'bg-orange-500 hover:bg-orange-600' : 'bg-gray-600 hover:bg-gray-700'"
-                    class="px-4 py-2 text-sm text-white rounded-xl font-medium transition">
-                <span x-text="editMode ? 'Batal Edit' : 'Edit Komponen'"></span>
+    {{-- Action buttons — di LUAR form utama agar tidak nested --}}
+    <div class="flex flex-wrap gap-2">
+        @if($slip->status === 'draft')
+        {{-- Edit mode toggle --}}
+        <button type="button" @click="editMode = !editMode"
+                :class="editMode ? 'bg-orange-500 hover:bg-orange-600' : 'bg-gray-600 hover:bg-gray-700'"
+                class="px-4 py-2 text-sm text-white rounded-xl font-medium transition">
+            <span x-text="editMode ? 'Batal Edit' : 'Edit Komponen'"></span>
+        </button>
+
+        {{-- Save edit (submit ke formSlip via form attribute) --}}
+        <button type="submit" form="formSlip"
+                x-show="editMode" style="display:none"
+                class="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold transition">
+            Simpan Perubahan
+        </button>
+
+        {{-- Finalize --}}
+        <form method="POST" action="{{ route('payroll.slip.finalize', $slip) }}"
+              onsubmit="return confirm('Finalisasi slip? Tidak bisa diedit setelah final.')">
+            @csrf
+            <button type="submit"
+                    class="px-4 py-2 text-sm bg-green-600 hover:bg-green-700 text-white rounded-xl font-semibold transition">
+                Finalisasi Slip
             </button>
-
-            {{-- Save edit --}}
-            <button type="submit" form="formSlip"
-                    x-show="editMode" style="display:none"
-                    class="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold transition">
-                Simpan Perubahan
+        </form>
+        @else
+        {{-- Unfinalize --}}
+        <form method="POST" action="{{ route('payroll.slip.unfinalize', $slip) }}"
+              onsubmit="return confirm('Kembalikan ke draft?')">
+            @csrf
+            <button type="submit"
+                    class="px-4 py-2 text-sm bg-orange-500 hover:bg-orange-600 text-white rounded-xl font-medium transition">
+                Buka Kembali (Draft)
             </button>
+        </form>
+        @endif
 
-            {{-- Finalize --}}
-            <form method="POST" action="{{ route('payroll.slip.finalize', $slip) }}"
-                  onsubmit="return confirm('Finalisasi slip? Tidak bisa diedit setelah final.')">
-                @csrf
-                <button type="submit"
-                        class="px-4 py-2 text-sm bg-green-600 hover:bg-green-700 text-white rounded-xl font-semibold transition">
-                    Finalisasi Slip
-                </button>
-            </form>
-            @else
-            {{-- Unfinalze --}}
-            <form method="POST" action="{{ route('payroll.slip.unfinalize', $slip) }}"
-                  onsubmit="return confirm('Kembalikan ke draft?')">
-                @csrf
-                <button type="submit"
-                        class="px-4 py-2 text-sm bg-orange-500 hover:bg-orange-600 text-white rounded-xl font-medium transition">
-                    Buka Kembali (Draft)
-                </button>
-            </form>
-            @endif
+        {{-- PDF --}}
+        <a href="{{ route('payroll.slip.pdf', $slip) }}"
+           class="px-4 py-2 text-sm bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-medium transition">
+            Download PDF
+        </a>
 
-            {{-- PDF --}}
-            <a href="{{ route('payroll.slip.pdf', $slip) }}"
-               class="px-4 py-2 text-sm bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-medium transition">
-                Download PDF
-            </a>
-
-            <a href="{{ route('payroll.index', ['bulan' => $slip->bulan, 'tahun' => $slip->tahun]) }}"
-               class="px-4 py-2 text-sm border border-gray-200 text-gray-600 hover:bg-gray-50 rounded-xl transition">
-                ← Kembali
-            </a>
-        </div>
-    </form>
+        <a href="{{ route('payroll.index', ['bulan' => $slip->bulan, 'tahun' => $slip->tahun]) }}"
+           class="px-4 py-2 text-sm border border-gray-200 text-gray-600 hover:bg-gray-50 rounded-xl transition">
+            ← Kembali
+        </a>
+    </div>
 
     {{-- Info --}}
     <div class="text-xs text-gray-400 space-y-0.5">

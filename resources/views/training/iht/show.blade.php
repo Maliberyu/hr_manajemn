@@ -22,14 +22,14 @@
                     @if($iht->pemateri) · Pemateri: <span class="font-medium text-gray-700">{{ $iht->pemateri }}</span>@endif
                 </p>
                 <div class="mt-3 flex flex-wrap gap-4 text-xs text-gray-500">
-                    <span>📍 {{ $iht->lokasi }}</span>
-                    <span>📅 {{ $iht->tanggal_mulai->translatedFormat('d M Y') }}
+                    <span> {{ $iht->lokasi }}</span>
+                    <span> {{ $iht->tanggal_mulai->translatedFormat('d M Y') }}
                         @if(!$iht->tanggal_mulai->equalTo($iht->tanggal_selesai))
                         — {{ $iht->tanggal_selesai->translatedFormat('d M Y') }}
                         @endif
                     </span>
                     @if($iht->jam_mulai)
-                    <span>🕐 {{ substr($iht->jam_mulai,0,5) }}
+                    <span> {{ substr($iht->jam_mulai,0,5) }}
                         @if($iht->jam_selesai)— {{ substr($iht->jam_selesai,0,5) }}@endif
                     </span>
                     @endif

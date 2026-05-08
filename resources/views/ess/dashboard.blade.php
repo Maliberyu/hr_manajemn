@@ -72,6 +72,16 @@
             <span class="w-1.5 h-1.5 rounded-full bg-orange-400 flex-shrink-0"></span>
             @endif
         </button>
+        <button @click="tab = 'payroll'"
+                :class="tab === 'payroll'
+                    ? 'bg-blue-600 text-white shadow-sm'
+                    : 'text-gray-500 hover:bg-gray-50'"
+                class="flex-1 py-2 text-sm font-semibold rounded-xl transition flex items-center justify-center gap-1.5">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/>
+            </svg>
+            Payroll
+        </button>
     </div>
 
     {{-- ════════════════════════════════════════════════════════════════════ --}}
@@ -549,6 +559,161 @@
         </div>
 
     </div>{{-- end tab training --}}
+
+    {{-- ════════════════════════════════════════════════════════════════════ --}}
+    {{-- TAB PAYROLL                                                          --}}
+    {{-- ════════════════════════════════════════════════════════════════════ --}}
+    <div x-show="tab === 'payroll'" x-cloak class="space-y-4">
+
+        @if($slipGaji->isEmpty())
+        {{-- Kosong --}}
+        <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-10 text-center">
+            <div class="w-14 h-14 bg-gray-50 rounded-2xl flex items-center justify-center mx-auto mb-3">
+                <svg class="w-7 h-7 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/>
+                </svg>
+            </div>
+            <p class="text-sm font-medium text-gray-600">Belum ada slip gaji</p>
+            <p class="text-xs text-gray-400 mt-1">Slip akan muncul setelah HRD memfinalisasi payroll.</p>
+        </div>
+
+        @else
+        {{-- ── Kartu slip terbaru ─────────────────────────────────────────── --}}
+        @php $latest = $slipGaji->first(); @endphp
+        <div class="bg-gradient-to-br from-blue-600 to-blue-800 rounded-2xl p-5 text-white shadow-lg">
+            <div class="flex items-center justify-between mb-4">
+                <div>
+                    <p class="text-xs font-medium opacity-70">Slip Gaji Terbaru</p>
+                    <p class="text-lg font-bold mt-0.5">
+                        {{ \Carbon\Carbon::create($latest->tahun, $latest->bulan)->translatedFormat('F Y') }}
+                    </p>
+                </div>
+                <span class="px-2.5 py-1 bg-white/20 rounded-xl text-xs font-semibold tracking-wide uppercase">
+                    {{ $latest->status }}
+                </span>
+            </div>
+
+            <div class="grid grid-cols-3 gap-2 mb-4">
+                <div class="bg-white/10 rounded-xl p-3 text-center">
+                    <p class="text-xs opacity-70 mb-1">Gaji Pokok</p>
+                    <p class="text-sm font-bold leading-tight">
+                        Rp {{ number_format($latest->gaji_pokok, 0, ',', '.') }}
+                    </p>
+                </div>
+                <div class="bg-white/10 rounded-xl p-3 text-center">
+                    <p class="text-xs opacity-70 mb-1">Tunjangan</p>
+                    <p class="text-sm font-bold text-green-300 leading-tight">
+                        +Rp {{ number_format($latest->total_tunjangan, 0, ',', '.') }}
+                    </p>
+                </div>
+                <div class="bg-white/10 rounded-xl p-3 text-center">
+                    <p class="text-xs opacity-70 mb-1">Potongan</p>
+                    <p class="text-sm font-bold text-red-300 leading-tight">
+                        -Rp {{ number_format($latest->total_potongan, 0, ',', '.') }}
+                    </p>
+                </div>
+            </div>
+
+            <div class="flex items-center justify-between pt-3 border-t border-white/20">
+                <div>
+                    <p class="text-xs opacity-70">Total Diterima</p>
+                    <p class="text-2xl font-bold">Rp {{ number_format($latest->gaji_bersih, 0, ',', '.') }}</p>
+                </div>
+                <!-- <a href="{{ route('ess.payroll.pdf', $latest) }}"
+                   class="flex items-center gap-2 px-4 py-2.5 bg-white text-blue-700 rounded-xl text-sm font-semibold hover:bg-blue-50 transition shadow">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                    </svg>
+                    Cetak PDF
+                </a> -->
+            </div>
+        </div>
+
+        {{-- ── Komponen slip terbaru ──────────────────────────────────────── --}}
+        @php
+            $tambahKomp = $latest->komponenSlip->where('jenis','tambah');
+            $kurangKomp = $latest->komponenSlip->where('jenis','kurang');
+        @endphp
+        <div class="grid grid-cols-2 gap-3">
+            {{-- Pendapatan --}}
+            <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                <div class="px-4 py-3 bg-green-50 border-b border-green-100">
+                    <p class="text-xs font-semibold text-green-700">Pendapatan (+)</p>
+                </div>
+                <ul class="divide-y divide-gray-50 px-4">
+                    @foreach($tambahKomp as $k)
+                    <li class="py-2 flex items-center justify-between gap-2">
+                        <span class="text-xs text-gray-600 truncate">{{ $k->nama }}</span>
+                        <span class="text-xs font-semibold text-gray-800 whitespace-nowrap">
+                            Rp {{ number_format($k->nilai, 0, ',', '.') }}
+                        </span>
+                    </li>
+                    @endforeach
+                </ul>
+            </div>
+            {{-- Potongan --}}
+            <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                <div class="px-4 py-3 bg-red-50 border-b border-red-100">
+                    <p class="text-xs font-semibold text-red-600">Potongan (–)</p>
+                </div>
+                <ul class="divide-y divide-gray-50 px-4">
+                    @foreach($kurangKomp as $k)
+                    <li class="py-2 flex items-center justify-between gap-2">
+                        <span class="text-xs text-gray-600 truncate">{{ $k->nama }}</span>
+                        <span class="text-xs font-semibold text-red-600 whitespace-nowrap">
+                            Rp {{ number_format($k->nilai, 0, ',', '.') }}
+                        </span>
+                    </li>
+                    @endforeach
+                </ul>
+            </div>
+        </div>
+
+        {{-- ── Riwayat semua slip ─────────────────────────────────────────── --}}
+        <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+            <div class="px-4 py-3.5 border-b border-gray-100 flex items-center justify-between">
+                <p class="text-sm font-semibold text-gray-700">Riwayat Slip Gaji</p>
+                <span class="text-xs text-gray-400">{{ $slipGaji->count() }} periode</span>
+            </div>
+            <ul class="divide-y divide-gray-50">
+                @foreach($slipGaji as $slip)
+                <li class="flex items-center gap-3 px-4 py-3.5 hover:bg-gray-50/50 transition">
+                    <div class="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center flex-shrink-0">
+                        <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                        </svg>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm font-semibold text-gray-800">
+                            {{ \Carbon\Carbon::create($slip->tahun, $slip->bulan)->translatedFormat('F Y') }}
+                        </p>
+                        <p class="text-xs text-gray-500 mt-0.5">
+                            Bersih:
+                            <span class="font-semibold text-green-700">
+                                Rp {{ number_format($slip->gaji_bersih, 0, ',', '.') }}
+                            </span>
+                            <span class="text-gray-300 mx-1">·</span>
+                            Potongan:
+                            <span class="text-red-500">
+                                Rp {{ number_format($slip->total_potongan, 0, ',', '.') }}
+                            </span>
+                        </p>
+                    </div>
+                    <a href="{{ route('ess.payroll.pdf', $slip) }}"
+                       target="_blank"
+                       class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-xl transition flex-shrink-0">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                        </svg>
+                        Cetak
+                    </a>
+                </li>
+                @endforeach
+            </ul>
+        </div>
+
+        @endif
+    </div>{{-- end tab payroll --}}
 
 </div>
 @endsection

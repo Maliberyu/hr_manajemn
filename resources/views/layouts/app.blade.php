@@ -211,6 +211,24 @@
     {!! navLink('Cuti', 'cuti.index', 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z') !!}
     {!! navLink('Lembur', 'lembur.index', 'M13 10V3L4 14h7v7l9-11h-7z') !!}
     {!! navLink('Training Eksternal', 'training.eksternal.index', $trainingIcon) !!}
+    @php
+        $slipKaryawan = 0;
+        try { $slipKaryawan = \App\Models\SlipGaji::where('pegawai_id', auth()->user()->pegawai?->id)->final()->count(); } catch(\Throwable $e) {}
+    @endphp
+    @php
+        $urlSlipKaryawan = route('ess.dashboard', ['tab' => 'payroll']);
+        $activeSlipK     = request()->routeIs('ess.dashboard') && request('tab') === 'payroll';
+        $base   = $activeSlipK ? 'bg-blue-500/30 text-white' : 'text-blue-200 hover:bg-blue-800/50 hover:text-white';
+        $svg    = $activeSlipK ? 'text-blue-300' : 'text-blue-400 group-hover:text-blue-200';
+        $badge  = $slipKaryawan > 0 ? "<span x-show=\"sidebarOpen\" class=\"ml-auto px-1.5 py-0.5 text-xs bg-red-500 text-white rounded-full font-bold leading-none\">{$slipKaryawan}</span>" : '';
+    @endphp
+    <a href="{{ $urlSlipKaryawan }}" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition group {{ $base }}">
+        <svg class="w-5 h-5 flex-shrink-0 {{ $svg }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/>
+        </svg>
+        <span x-show="sidebarOpen" x-transition class="whitespace-nowrap flex-1">Slip Gaji</span>
+        {!! $badge !!}
+    </a>
 @endif
 
 {{-- ═══════════════════════════════ ATASAN ════════════════════════════════ --}}
@@ -220,6 +238,24 @@
     {!! navLink('Cuti', 'cuti.index', 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z', $badgeCuti) !!}
     {!! navLink('Lembur', 'lembur.index', 'M13 10V3L4 14h7v7l9-11h-7z', $badgeLembur) !!}
     {!! navLink('Training Eksternal', 'training.eksternal.index', $trainingIcon, $badgeEksternal) !!}
+    @php
+        $slipAtasan = 0;
+        try { $slipAtasan = \App\Models\SlipGaji::where('pegawai_id', auth()->user()->pegawai?->id)->final()->count(); } catch(\Throwable $e) {}
+    @endphp
+    @php
+        $urlSlipAtasan = route('ess.dashboard', ['tab' => 'payroll']);
+        $activeSlipA   = request()->routeIs('ess.dashboard') && request('tab') === 'payroll';
+        $baseA  = $activeSlipA ? 'bg-blue-500/30 text-white' : 'text-blue-200 hover:bg-blue-800/50 hover:text-white';
+        $svgA   = $activeSlipA ? 'text-blue-300' : 'text-blue-400 group-hover:text-blue-200';
+        $badgeA = $slipAtasan > 0 ? "<span x-show=\"sidebarOpen\" class=\"ml-auto px-1.5 py-0.5 text-xs bg-red-500 text-white rounded-full font-bold leading-none\">{$slipAtasan}</span>" : '';
+    @endphp
+    <a href="{{ $urlSlipAtasan }}" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition group {{ $baseA }}">
+        <svg class="w-5 h-5 flex-shrink-0 {{ $svgA }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/>
+        </svg>
+        <span x-show="sidebarOpen" x-transition class="whitespace-nowrap flex-1">Slip Gaji Saya</span>
+        {!! $badgeA !!}
+    </a>
 @endif
 
 {{-- ═══════════════════════════════ HRD & ADMIN ════════════════════════════ --}}

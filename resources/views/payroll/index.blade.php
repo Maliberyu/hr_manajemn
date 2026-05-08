@@ -23,7 +23,7 @@
         <div class="bg-white border border-gray-100 rounded-2xl p-3 flex flex-col gap-1.5">
             <a href="{{ route('payroll.master') }}"
                class="block text-center py-1.5 text-xs border border-blue-200 text-blue-600 hover:bg-blue-50 rounded-xl transition font-medium">
-                ⚙ Master Gaji
+                 Master Gaji
             </a>
             <a href="{{ route('payroll.export', ['bulan' => $bulan, 'tahun' => $tahun]) }}"
                class="block text-center py-1.5 text-xs border border-gray-200 text-gray-600 hover:bg-gray-50 rounded-xl transition">
@@ -81,7 +81,7 @@
             <input type="hidden" name="tahun" value="{{ $tahun }}">
             <button type="submit"
                     class="px-5 py-2 text-sm bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-semibold transition">
-                ⚡ Generate Slip Draft
+                 Generate Slip Draft
             </button>
         </form>
     </div>

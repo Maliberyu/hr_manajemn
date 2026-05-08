@@ -8,7 +8,6 @@ use App\Models\Departemen;
 use App\Models\Pendidikan;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
-use Intervention\Image\Laravel\Facades\Image;
 
 class MasterKaryawanController extends Controller
 {
@@ -156,12 +155,45 @@ class MasterKaryawanController extends Controller
     {
         $filename = 'pegawai/foto/' . $nik . '_' . time() . '.jpg';
 
-        // Resize ke 400×400, crop ke tengah, simpan sebagai JPG
-        $img = Image::read($file)
-            ->cover(400, 400)
-            ->toJpeg(85);
+        // Jika GD tidak tersedia, simpan file langsung tanpa resize
+        if (!extension_loaded('gd')) {
+            Storage::disk('public')->put($filename, file_get_contents($file->getRealPath()));
+            return $filename;
+        }
 
-        Storage::disk('public')->put($filename, $img);
+        $mime = $file->getMimeType();
+        $src  = match ($mime) {
+            'image/png'  => \imagecreatefrompng($file->getRealPath()),
+            'image/webp' => \imagecreatefromwebp($file->getRealPath()),
+            default      => \imagecreatefromjpeg($file->getRealPath()),
+        };
+
+        $srcW = \imagesx($src);
+        $srcH = \imagesy($src);
+        $size = 400;
+
+        // Crop persegi dari tengah lalu resize ke 400×400
+        if ($srcW > $srcH) {
+            $cropX = (int)(($srcW - $srcH) / 2);
+            $cropY = 0;
+            $cropS = $srcH;
+        } else {
+            $cropX = 0;
+            $cropY = (int)(($srcH - $srcW) / 2);
+            $cropS = $srcW;
+        }
+
+        $dst = \imagecreatetruecolor($size, $size);
+        \imagecopyresampled($dst, $src, 0, 0, $cropX, $cropY, $size, $size, $cropS, $cropS);
+
+        ob_start();
+        \imagejpeg($dst, null, 85);
+        $data = ob_get_clean();
+
+        \imagedestroy($src);
+        \imagedestroy($dst);
+
+        Storage::disk('public')->put($filename, $data);
 
         return $filename;
     }

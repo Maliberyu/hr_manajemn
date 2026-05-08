@@ -94,7 +94,7 @@ class Pegawai extends Model
         if ($this->photo) {
             $path = $this->photo;
             if (Storage::disk('public')->exists($path)) {
-                return Storage::url($path);
+                return Storage::disk('public')->url($path);
             }
             // coba path lama: langsung di root public
             if (file_exists(public_path($path))) {
@@ -116,12 +116,11 @@ class Pegawai extends Model
         return \Carbon\Carbon::parse($this->tgl_lahir)->age;
     }
 
-    /** Masa kerja dalam tahun */
+    /** Masa kerja dalam tahun dan bulan */
     public function getMasaKerjaAttribute(): string
     {
-        $years = \Carbon\Carbon::parse($this->mulai_kerja)->diffInYears(now());
-        $months = \Carbon\Carbon::parse($this->mulai_kerja)->diffInMonths(now()) % 12;
-        return "{$years} tahun {$months} bulan";
+        $diff = \Carbon\Carbon::parse($this->mulai_kerja)->diff(now());
+        return "{$diff->y} tahun {$diff->m} bulan";
     }
 
     // ─── Relasi ke tabel SIK yang sudah ada ────────────────────────────────────
