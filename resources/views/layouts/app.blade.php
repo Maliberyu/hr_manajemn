@@ -27,9 +27,9 @@
 
     <!-- Sidebar -->
     <aside
-        :class="sidebarOpen ? 'w-64' : 'w-16'"
-        class="fixed top-0 left-0 h-full z-40 bg-gradient-to-b from-blue-900 to-blue-950 text-white flex flex-col transition-all duration-300 ease-in-out
-               hidden lg:flex">
+        :class="sidebarOpen ? 'w-64' : 'w-64 lg:w-16'"
+        :style="mobileOpen ? 'display:flex' : ''"
+        class="fixed top-0 left-0 h-full z-40 bg-gradient-to-b from-blue-900 to-blue-950 text-white flex-col transition-all duration-300 ease-in-out hidden lg:flex">
 
         {{-- Logo --}}
         <div class="flex items-center gap-3 px-4 py-5 border-b border-blue-800">
@@ -39,21 +39,23 @@
                         d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
                 </svg>
             </div>
-            <span x-show="sidebarOpen" x-transition class="font-bold text-sm leading-tight whitespace-nowrap">
+            <span class="font-bold text-sm leading-tight whitespace-nowrap flex-1"
+                  :class="(!sidebarOpen && !mobileOpen) ? 'lg:hidden' : ''">
                 HR Manajemen
             </span>
-            <button @click="sidebarOpen = !sidebarOpen"
-                    x-show="sidebarOpen"
-                    class="ml-auto text-blue-300 hover:text-white transition">
+            {{-- Tutup mobile sidebar --}}
+            <button @click="mobileOpen = false"
+                    class="lg:hidden text-blue-300 hover:text-white transition ml-auto">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                 </svg>
             </button>
+            {{-- Toggle collapse desktop --}}
             <button @click="sidebarOpen = !sidebarOpen"
-                    x-show="!sidebarOpen"
-                    class="text-blue-300 hover:text-white transition">
+                    class="hidden lg:block text-blue-300 hover:text-white transition ml-auto">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7"/>
+                    <path x-show="sidebarOpen" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7"/>
+                    <path x-show="!sidebarOpen" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7"/>
                 </svg>
             </button>
         </div>
@@ -146,7 +148,8 @@
             </div>
 
         </nav> -->
-        <nav class="flex-1 overflow-y-auto py-4 space-y-0.5 px-2">
+        <nav class="flex-1 overflow-y-auto py-4 space-y-0.5 px-2"
+             @click.capture="if($event.target.closest('a[href]')) mobileOpen = false">
 @php
     $user         = auth()->user();
     $role         = $user->role ?? 'karyawan';
