@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://laravel.com/assets/img/components/logo-laravel.svg" width="200" alt="Laravel">
+  <img src="https://avatars.githubusercontent.com/u/219940777?v=4&size=64" width="200" alt="Laravel">
   <h1 align="center">HR Management System</h1>
 </p>
 
