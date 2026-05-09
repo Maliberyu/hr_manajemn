@@ -478,7 +478,46 @@
     @stack('scripts')
 
     {{-- ── Modal: Feature Disabled ─────────────────────────────────────────── --}}
+    <!-- Modal -->
+<div x-show="featureModal"
+     x-transition:enter="transition ease-out duration-200"
+     x-transition:enter-start="opacity-0"
+     x-transition:enter-end="opacity-100"
+     x-transition:leave="transition ease-in duration-150"
+     x-transition:leave-start="opacity-100"
+     x-transition:leave-end="opacity-0"
+     class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4"
+     style="display:none"
+     @click.self="featureModal = false">
+
     <div x-show="featureModal"
+         x-transition:enter="transition ease-out duration-200"
+         x-transition:enter-start="opacity-0 scale-90"
+         x-transition:enter-end="opacity-100 scale-100"
+         x-transition:leave="transition ease-in duration-150"
+         x-transition:leave-start="opacity-100 scale-100"
+         x-transition:leave-end="opacity-0 scale-90"
+         class="bg-white rounded-2xl p-6 w-[320px] shadow-2xl text-center">
+
+        <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-yellow-100 flex items-center justify-center text-3xl">
+            Sorry!
+        </div>
+
+        <h3 class="text-lg font-bold text-gray-800 mb-2">
+            Fitur Belum Tersedia
+        </h3>
+
+        <p class="text-sm text-gray-500 leading-relaxed mb-5">
+            Masih dalam pengembangan develover ganteng wkwkkw
+        </p>
+
+        <button @click="featureModal = false"
+                class="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold text-sm transition">
+            OK
+        </button>
+    </div>
+</div>
+    <!-- <div x-show="featureModal"
          x-transition:enter="transition ease-out duration-200"
          x-transition:enter-start="opacity-0"
          x-transition:enter-end="opacity-100"
@@ -506,7 +545,7 @@
                 OK, Mengerti
             </button>
         </div>
-    </div>
+    </div> -->
 
     {{-- ── Toast: Feature Disabled (fallback akses langsung via URL) ──────── --}}
     @if(session('feature_disabled'))
