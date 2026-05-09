@@ -8,7 +8,7 @@
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     @stack('styles')
 </head>
-<body class="h-full bg-gray-50" x-data="{ sidebarOpen: true, mobileOpen: false }">
+<body class="h-full bg-gray-50" x-data="{ sidebarOpen: true, mobileOpen: false, featureModal: false }">
 
     {{-- ════════════════════════════════════════════════════════════ --}}
     {{-- SIDEBAR --}}
@@ -186,12 +186,27 @@
         // Badge tidak tampil jika DB error — tidak crash halaman
     }
 
-    // ── navLink helper (dengan badge opsional) ────────────────────────────────
-    function navLink(string $label, string $route, string $icon, int $badge = 0): string {
-        $active  = request()->routeIs($route);
-        $base    = $active ? 'bg-blue-500/30 text-white' : 'text-blue-200 hover:bg-blue-800/50 hover:text-white';
-        $svg     = $active ? 'text-blue-300' : 'text-blue-400 group-hover:text-blue-200';
-        $dot     = $active ? '<span x-show="sidebarOpen" class="ml-auto w-1.5 h-1.5 rounded-full bg-blue-400"></span>' : '';
+    // ── navLink helper (dengan badge & feature flag opsional) ────────────────
+    function navLink(string $label, string $route, string $icon, int $badge = 0, ?string $feature = null): string {
+        $disabled  = $feature && !config("features.{$feature}", true);
+        $active    = !$disabled && request()->routeIs($route);
+        $base      = $active ? 'bg-blue-500/30 text-white' : 'text-blue-200 hover:bg-blue-800/50 hover:text-white';
+        $svg       = $active ? 'text-blue-300' : 'text-blue-400 group-hover:text-blue-200';
+
+        if ($disabled) {
+            return <<<HTML
+            <button @click="featureModal = true"
+                    class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition group {$base} opacity-60 cursor-pointer">
+                <svg class="w-5 h-5 flex-shrink-0 {$svg}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="{$icon}"/>
+                </svg>
+                <span x-show="sidebarOpen" x-transition class="whitespace-nowrap flex-1 text-left">{$label}</span>
+                <span x-show="sidebarOpen" class="text-xs opacity-60">!</span>
+            </button>
+            HTML;
+        }
+
+        $dot       = $active ? '<span x-show="sidebarOpen" class="ml-auto w-1.5 h-1.5 rounded-full bg-blue-400"></span>' : '';
         $badgeHtml = $badge > 0
             ? "<span x-show=\"sidebarOpen\" class=\"ml-auto px-1.5 py-0.5 text-xs bg-red-500 text-white rounded-full font-bold leading-none\">{$badge}</span>"
             : $dot;
@@ -211,9 +226,9 @@
 {{-- ═══════════════════════════════ KARYAWAN ════════════════════════════════ --}}
 @if($role === 'karyawan')
     {!! navLink('Portal Karyawan', 'ess.dashboard', 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z') !!}
-    {!! navLink('Cuti', 'cuti.index', 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z') !!}
-    {!! navLink('Lembur', 'lembur.index', 'M13 10V3L4 14h7v7l9-11h-7z') !!}
-    {!! navLink('Training Eksternal', 'training.eksternal.index', $trainingIcon) !!}
+    {!! navLink('Cuti', 'cuti.index', 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z', 0, 'cuti') !!}
+    {!! navLink('Lembur', 'lembur.index', 'M13 10V3L4 14h7v7l9-11h-7z', 0, 'lembur') !!}
+    {!! navLink('Training Eksternal', 'training.eksternal.index', $trainingIcon, 0, 'training') !!}
     @php
         $slipKaryawan = 0;
         try { $slipKaryawan = \App\Models\SlipGaji::where('pegawai_id', auth()->user()->pegawai?->id)->final()->count(); } catch(\Throwable $e) {}
@@ -238,9 +253,9 @@
 @if($role === 'atasan')
     {!! navLink('Dashboard', 'dashboard', 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6') !!}
     {!! navLink('ESS (Portal Saya)', 'ess.dashboard', 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z') !!}
-    {!! navLink('Cuti', 'cuti.index', 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z', $badgeCuti) !!}
-    {!! navLink('Lembur', 'lembur.index', 'M13 10V3L4 14h7v7l9-11h-7z', $badgeLembur) !!}
-    {!! navLink('Training Eksternal', 'training.eksternal.index', $trainingIcon, $badgeEksternal) !!}
+    {!! navLink('Cuti', 'cuti.index', 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z', $badgeCuti, 'cuti') !!}
+    {!! navLink('Lembur', 'lembur.index', 'M13 10V3L4 14h7v7l9-11h-7z', $badgeLembur, 'lembur') !!}
+    {!! navLink('Training Eksternal', 'training.eksternal.index', $trainingIcon, $badgeEksternal, 'training') !!}
     @php
         $slipAtasan = 0;
         try { $slipAtasan = \App\Models\SlipGaji::where('pegawai_id', auth()->user()->pegawai?->id)->final()->count(); } catch(\Throwable $e) {}
@@ -266,16 +281,17 @@
     {!! navLink('Dashboard', 'dashboard', 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6') !!}
     {!! navLink('Master Karyawan', 'karyawan.index', 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z') !!}
     {!! navLink('Absensi', 'absensi.index', 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z') !!}
-    {!! navLink('Cuti', 'cuti.index', 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z', $badgeCuti) !!}
-    {!! navLink('Shift Kerja', 'shift.index', 'M4 6h16M4 10h16M4 14h16M4 18h16') !!}
-    {!! navLink('Lembur', 'lembur.index', 'M13 10V3L4 14h7v7l9-11h-7z', $badgeLembur) !!}
-    {!! navLink('Payroll', 'payroll.index', 'M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z') !!}
-    {!! navLink('Penilaian Kinerja', 'kinerja.index', 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z') !!}
-    {!! navLink('Rekrutmen', 'rekrutmen.index', 'M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z', $badgeRekrutmen) !!}
+    {!! navLink('Cuti', 'cuti.index', 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z', $badgeCuti, 'cuti') !!}
+    {!! navLink('Shift Kerja', 'shift.index', 'M4 6h16M4 10h16M4 14h16M4 18h16', 0, 'shift') !!}
+    {!! navLink('Lembur', 'lembur.index', 'M13 10V3L4 14h7v7l9-11h-7z', $badgeLembur, 'lembur') !!}
+    {!! navLink('Payroll', 'payroll.index', 'M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z', 0, 'payroll') !!}
+    {!! navLink('Penilaian Kinerja', 'kinerja.index', 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z', 0, 'kinerja') !!}
+    {!! navLink('Rekrutmen', 'rekrutmen.index', 'M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z', $badgeRekrutmen, 'rekrutmen') !!}
 
     {{-- Training: dropdown IHT + Eksternal + Setting --}}
-    <div x-data="{ open: {{ $trainingActive ? 'true' : 'false' }} }">
-        <button @click="open = !open"
+    @php $trainingDisabled = !config('features.training', true); @endphp
+    <div x-data="{ open: {{ !$trainingDisabled && $trainingActive ? 'true' : 'false' }} }">
+        <button @click="{{ $trainingDisabled ? 'featureModal = true' : 'open = !open' }}"
                 class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition group
                        {{ $trainingActive ? 'bg-blue-500/30 text-white' : 'text-blue-200 hover:bg-blue-800/50 hover:text-white' }}">
             <svg class="w-5 h-5 flex-shrink-0 {{ $trainingActive ? 'text-blue-300' : 'text-blue-400 group-hover:text-blue-200' }}"
@@ -460,5 +476,61 @@
     </div>
 
     @stack('scripts')
+
+    {{-- ── Modal: Feature Disabled ─────────────────────────────────────────── --}}
+    <div x-show="featureModal"
+         x-transition:enter="transition ease-out duration-200"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         x-transition:leave="transition ease-in duration-150"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0"
+         class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4"
+         style="display:none"
+         @click.self="featureModal = false">
+        <div x-show="featureModal"
+             x-transition:enter="transition ease-out duration-200"
+             x-transition:enter-start="opacity-0 scale-90"
+             x-transition:enter-end="opacity-100 scale-100"
+             x-transition:leave="transition ease-in duration-150"
+             x-transition:leave-start="opacity-100 scale-100"
+             x-transition:leave-end="opacity-0 scale-90"
+             class="bg-white rounded-2xl p-7 max-w-xs w-full shadow-2xl text-center">
+            <div class="text-5xl mb-4">!</div>
+            <h3 class="text-base font-bold text-gray-800 mb-2">Fitur Belum Tersedia</h3>
+            <p class="text-sm text-gray-500 leading-relaxed mb-6">
+                Masih dalam pengembangan oleh developer ganteng kita semua wkkwwk
+            </p>
+            <button @click="featureModal = false"
+                    class="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold text-sm transition">
+                OK, Mengerti
+            </button>
+        </div>
+    </div>
+
+    {{-- ── Toast: Feature Disabled (fallback akses langsung via URL) ──────── --}}
+    @if(session('feature_disabled'))
+    <div x-data="{ show: true }"
+         x-init="setTimeout(() => show = false, 5000)"
+         x-show="show"
+         x-transition:enter="transition ease-out duration-300"
+         x-transition:enter-start="opacity-0 translate-y-4"
+         x-transition:enter-end="opacity-100 translate-y-0"
+         x-transition:leave="transition ease-in duration-200"
+         x-transition:leave-start="opacity-100 translate-y-0"
+         x-transition:leave-end="opacity-0 translate-y-4"
+         class="fixed bottom-5 left-1/2 -translate-x-1/2 z-50 w-full max-w-sm px-4">
+        <div class="bg-gray-900 text-white px-5 py-3.5 rounded-2xl shadow-xl flex items-start gap-3">
+            <span class="text-xl flex-shrink-0">🚧</span>
+            <p class="text-sm leading-relaxed flex-1">{{ session('feature_disabled') }}</p>
+            <button @click="show = false" class="text-gray-400 hover:text-white transition flex-shrink-0 mt-0.5">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+    </div>
+    @endif
+
 </body>
 </html>

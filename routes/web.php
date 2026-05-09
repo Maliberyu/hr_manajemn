@@ -48,7 +48,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/ess/payroll/{slip}/pdf', [DashboardController::class, 'essSlipPdf'])->name('ess.payroll.pdf');
 
     // ── Cuti — semua role (karyawan submit, atasan/hrd approve; controller filter) ─
-    Route::prefix('cuti')->name('cuti.')->group(function () {
+    Route::prefix('cuti')->name('cuti.')->middleware('feature:cuti')->group(function () {
         Route::get('/',                         [CutiController::class, 'index'])->name('index');
         Route::get('/buat',                     [CutiController::class, 'create'])->name('create');
         Route::post('/',                        [CutiController::class, 'store'])->name('store');
@@ -62,7 +62,7 @@ Route::middleware(['auth'])->group(function () {
     });
 
     // ── Lembur — semua role (karyawan submit; controller filter) ──────────────
-    Route::prefix('lembur')->name('lembur.')->group(function () {
+    Route::prefix('lembur')->name('lembur.')->middleware('feature:lembur')->group(function () {
         Route::get('/',                         [LemburController::class, 'index'])->name('index');
         Route::get('/buat',                     [LemburController::class, 'create'])->name('create');
         Route::post('/',                        [LemburController::class, 'store'])->name('store');
@@ -77,7 +77,7 @@ Route::middleware(['auth'])->group(function () {
     });
 
     // ── Training Eksternal — semua role (controller filter per role) ───────────
-    Route::prefix('training/eksternal')->name('training.eksternal.')->group(function () {
+    Route::prefix('training/eksternal')->name('training.eksternal.')->middleware('feature:training')->group(function () {
         Route::get('/',                                     [TrainingEksternalController::class, 'index'])->name('index');
         Route::get('/buat',                                 [TrainingEksternalController::class, 'create'])->name('create');
         Route::post('/',                                    [TrainingEksternalController::class, 'store'])->name('store');
@@ -134,7 +134,7 @@ Route::middleware(['auth', 'role:hrd,admin'])->group(function () {
     });
 
     // ── Shift Kerja ────────────────────────────────────────────────────────────
-    Route::prefix('shift')->name('shift.')->group(function () {
+    Route::prefix('shift')->name('shift.')->middleware('feature:shift')->group(function () {
         Route::get('/',                           [ShiftController::class, 'index'])->name('index');
         Route::get('/karyawan/{karyawan}/edit',   [ShiftController::class, 'edit'])->name('edit');
         Route::put('/karyawan/{karyawan}',        [ShiftController::class, 'update'])->name('update');
@@ -144,7 +144,7 @@ Route::middleware(['auth', 'role:hrd,admin'])->group(function () {
     });
 
     // ── Payroll ────────────────────────────────────────────────────────────────
-    Route::prefix('payroll')->name('payroll.')->group(function () {
+    Route::prefix('payroll')->name('payroll.')->middleware('feature:payroll')->group(function () {
         Route::get('/',                                    [PayrollController::class, 'index'])->name('index');
         Route::get('/export',                              [PayrollController::class, 'export'])->name('export');
         Route::post('/generate',                           [PayrollController::class, 'generateSlips'])->name('generate');
@@ -166,7 +166,7 @@ Route::middleware(['auth', 'role:hrd,admin'])->group(function () {
     });
 
     // ── Penilaian Kinerja ──────────────────────────────────────────────────────
-    Route::prefix('kinerja')->name('kinerja.')->group(function () {
+    Route::prefix('kinerja')->name('kinerja.')->middleware('feature:kinerja')->group(function () {
         Route::get('/', [KinerjaController::class, 'index'])->name('index');
 
         Route::get('/master',                                    [KinerjaController::class, 'master'])->name('master');
@@ -204,7 +204,7 @@ Route::middleware(['auth', 'role:hrd,admin'])->group(function () {
     });
 
     // ── Rekrutmen ──────────────────────────────────────────────────────────────
-    Route::prefix('rekrutmen')->name('rekrutmen.')->group(function () {
+    Route::prefix('rekrutmen')->name('rekrutmen.')->middleware('feature:rekrutmen')->group(function () {
         Route::get('/',                                 [RekrutmenController::class, 'index'])->name('index');
         Route::get('/buat',                             [RekrutmenController::class, 'create'])->name('create');
         Route::post('/',                                [RekrutmenController::class, 'store'])->name('store');
@@ -219,7 +219,7 @@ Route::middleware(['auth', 'role:hrd,admin'])->group(function () {
     });
 
     // ── Training IHT + Setting ─────────────────────────────────────────────────
-    Route::prefix('training')->name('training.')->group(function () {
+    Route::prefix('training')->name('training.')->middleware('feature:training')->group(function () {
         Route::get('/setting',  [TrainingController::class, 'setting'])->name('setting');
         Route::post('/setting', [TrainingController::class, 'settingUpdate'])->name('setting.update');
 
