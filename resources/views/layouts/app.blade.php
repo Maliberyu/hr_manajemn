@@ -226,7 +226,44 @@
 {{-- ═══════════════════════════════ KARYAWAN ════════════════════════════════ --}}
 @if($role === 'karyawan')
     {!! navLink('Portal Karyawan', 'ess.dashboard', 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z') !!}
-    {!! navLink('Cuti', 'cuti.index', 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z', 0, 'cuti') !!}
+    @php $cutiIjinActive = request()->routeIs('cuti.*') || request()->routeIs('ijin.*'); @endphp
+    <div x-data="{ open: {{ $cutiIjinActive ? 'true' : 'false' }} }">
+        @if(!config('features.cuti', true))
+        <button @click="featureModal = true"
+                class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition text-blue-200 hover:bg-blue-800/50 opacity-60">
+            <svg class="w-5 h-5 flex-shrink-0 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+            </svg>
+            <span x-show="sidebarOpen" class="whitespace-nowrap flex-1 text-left">Cuti & Ijin</span>
+            <span x-show="sidebarOpen" class="text-xs opacity-60">🔒</span>
+        </button>
+        @else
+        <button @click="open = !open"
+                class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition {{ $cutiIjinActive ? 'bg-blue-500/30 text-white' : 'text-blue-200 hover:bg-blue-800/50 hover:text-white' }}">
+            <svg class="w-5 h-5 flex-shrink-0 {{ $cutiIjinActive ? 'text-blue-300' : 'text-blue-400' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+            </svg>
+            <span x-show="sidebarOpen" class="whitespace-nowrap flex-1 text-left">Cuti & Ijin</span>
+            <svg x-show="sidebarOpen" class="w-3.5 h-3.5 transition-transform" :class="open ? 'rotate-180' : ''"
+                 fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-width="2" d="M19 9l-7 7-7-7"/>
+            </svg>
+        </button>
+        <div x-show="open && sidebarOpen" x-cloak class="ml-4 mt-0.5 space-y-0.5">
+            @foreach([['Pengajuan Cuti','cuti.index','cuti.*'],['Ijin Sakit','ijin.index','ijin.*'],['Ijin Terlambat','ijin.index',''],['Ijin Pulang Duluan','ijin.index','']] as $i => [$lbl,$rt,$match])
+            @php
+                $params = match($i) { 0 => [], 1 => ['jenis'=>'sakit'], 2 => ['jenis'=>'terlambat'], 3 => ['jenis'=>'pulang_duluan'] };
+                $sa = $i === 0 ? request()->routeIs('cuti.*') : (request()->routeIs('ijin.*') && request()->route('jenis') === ($params['jenis'] ?? ''));
+            @endphp
+            <a href="{{ route($rt, $params) }}"
+               class="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium transition
+                      {{ $sa ? 'bg-blue-500/20 text-white' : 'text-blue-300 hover:bg-blue-800/40 hover:text-white' }}">
+                <span class="w-1 h-1 rounded-full bg-current opacity-60 flex-shrink-0"></span>{{ $lbl }}
+            </a>
+            @endforeach
+        </div>
+        @endif
+    </div>
     {!! navLink('Lembur', 'lembur.index', 'M13 10V3L4 14h7v7l9-11h-7z', 0, 'lembur') !!}
     {!! navLink('Training Eksternal', 'training.eksternal.index', $trainingIcon, 0, 'training') !!}
     @php
@@ -253,7 +290,40 @@
 @if($role === 'atasan')
     {!! navLink('Dashboard', 'dashboard', 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6') !!}
     {!! navLink('ESS (Portal Saya)', 'ess.dashboard', 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z') !!}
-    {!! navLink('Cuti', 'cuti.index', 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z', $badgeCuti, 'cuti') !!}
+    @php $cutiIjinActiveA = request()->routeIs('cuti.*') || request()->routeIs('ijin.*'); @endphp
+    <div x-data="{ open: {{ $cutiIjinActiveA ? 'true' : 'false' }} }">
+        <button @click="{{ !config('features.cuti', true) ? 'featureModal = true' : 'open = !open' }}"
+                class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition {{ $cutiIjinActiveA ? 'bg-blue-500/30 text-white' : 'text-blue-200 hover:bg-blue-800/50 hover:text-white' }} {{ !config('features.cuti',true) ? 'opacity-60' : '' }}">
+            <svg class="w-5 h-5 flex-shrink-0 {{ $cutiIjinActiveA ? 'text-blue-300' : 'text-blue-400' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+            </svg>
+            <span x-show="sidebarOpen" class="whitespace-nowrap flex-1 text-left">Cuti & Ijin</span>
+            @if($badgeCuti > 0)
+            <span x-show="sidebarOpen" class="ml-auto px-1.5 py-0.5 text-xs bg-red-500 text-white rounded-full font-bold leading-none">{{ $badgeCuti }}</span>
+            @elseif(config('features.cuti', true))
+            <svg x-show="sidebarOpen" class="w-3.5 h-3.5 transition-transform" :class="open ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-width="2" d="M19 9l-7 7-7-7"/>
+            </svg>
+            @else
+            <span x-show="sidebarOpen" class="text-xs opacity-60">🔒</span>
+            @endif
+        </button>
+        @if(config('features.cuti', true))
+        <div x-show="open && sidebarOpen" x-cloak class="ml-4 mt-0.5 space-y-0.5">
+            @foreach([['Pengajuan Cuti','cuti.index'],['Ijin Sakit','ijin.index'],['Ijin Terlambat','ijin.index'],['Ijin Pulang Duluan','ijin.index']] as $i => [$lbl,$rt])
+            @php
+                $params = match($i) { 0 => [], 1 => ['jenis'=>'sakit'], 2 => ['jenis'=>'terlambat'], 3 => ['jenis'=>'pulang_duluan'] };
+                $sa = $i === 0 ? request()->routeIs('cuti.*') : (request()->routeIs('ijin.*') && request()->route('jenis') === ($params['jenis'] ?? ''));
+            @endphp
+            <a href="{{ route($rt, $params) }}"
+               class="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium transition
+                      {{ $sa ? 'bg-blue-500/20 text-white' : 'text-blue-300 hover:bg-blue-800/40 hover:text-white' }}">
+                <span class="w-1 h-1 rounded-full bg-current opacity-60 flex-shrink-0"></span>{{ $lbl }}
+            </a>
+            @endforeach
+        </div>
+        @endif
+    </div>
     {!! navLink('Lembur', 'lembur.index', 'M13 10V3L4 14h7v7l9-11h-7z', $badgeLembur, 'lembur') !!}
     {!! navLink('Training Eksternal', 'training.eksternal.index', $trainingIcon, $badgeEksternal, 'training') !!}
     @php
@@ -281,7 +351,40 @@
     {!! navLink('Dashboard', 'dashboard', 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6') !!}
     {!! navLink('Master Karyawan', 'karyawan.index', 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z') !!}
     {!! navLink('Absensi', 'absensi.index', 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z') !!}
-    {!! navLink('Cuti', 'cuti.index', 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z', $badgeCuti, 'cuti') !!}
+    @php $cutiIjinActiveH = request()->routeIs('cuti.*') || request()->routeIs('ijin.*'); @endphp
+    <div x-data="{ open: {{ $cutiIjinActiveH ? 'true' : 'false' }} }">
+        <button @click="{{ !config('features.cuti', true) ? 'featureModal = true' : 'open = !open' }}"
+                class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition {{ $cutiIjinActiveH ? 'bg-blue-500/30 text-white' : 'text-blue-200 hover:bg-blue-800/50 hover:text-white' }} {{ !config('features.cuti',true) ? 'opacity-60' : '' }}">
+            <svg class="w-5 h-5 flex-shrink-0 {{ $cutiIjinActiveH ? 'text-blue-300' : 'text-blue-400' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+            </svg>
+            <span x-show="sidebarOpen" class="whitespace-nowrap flex-1 text-left">Cuti & Ijin</span>
+            @if($badgeCuti > 0)
+            <span x-show="sidebarOpen" class="px-1.5 py-0.5 text-xs bg-red-500 text-white rounded-full font-bold leading-none">{{ $badgeCuti }}</span>
+            @elseif(config('features.cuti', true))
+            <svg x-show="sidebarOpen" class="w-3.5 h-3.5 transition-transform" :class="open ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-width="2" d="M19 9l-7 7-7-7"/>
+            </svg>
+            @else
+            <span x-show="sidebarOpen" class="text-xs opacity-60">🔒</span>
+            @endif
+        </button>
+        @if(config('features.cuti', true))
+        <div x-show="open && sidebarOpen" x-cloak class="ml-4 mt-0.5 space-y-0.5">
+            @foreach([['Pengajuan Cuti','cuti.index'],['Ijin Sakit','ijin.index'],['Ijin Terlambat','ijin.index'],['Ijin Pulang Duluan','ijin.index']] as $i => [$lbl,$rt])
+            @php
+                $params = match($i) { 0 => [], 1 => ['jenis'=>'sakit'], 2 => ['jenis'=>'terlambat'], 3 => ['jenis'=>'pulang_duluan'] };
+                $sa = $i === 0 ? request()->routeIs('cuti.*') : (request()->routeIs('ijin.*') && request()->route('jenis') === ($params['jenis'] ?? ''));
+            @endphp
+            <a href="{{ route($rt, $params) }}"
+               class="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium transition
+                      {{ $sa ? 'bg-blue-500/20 text-white' : 'text-blue-300 hover:bg-blue-800/40 hover:text-white' }}">
+                <span class="w-1 h-1 rounded-full bg-current opacity-60 flex-shrink-0"></span>{{ $lbl }}
+            </a>
+            @endforeach
+        </div>
+        @endif
+    </div>
     {!! navLink('Shift Kerja', 'shift.index', 'M4 6h16M4 10h16M4 14h16M4 18h16', 0, 'shift') !!}
     {!! navLink('Lembur', 'lembur.index', 'M13 10V3L4 14h7v7l9-11h-7z', $badgeLembur, 'lembur') !!}
     {!! navLink('Payroll', 'payroll.index', 'M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z', 0, 'payroll') !!}

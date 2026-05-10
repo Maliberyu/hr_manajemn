@@ -20,6 +20,7 @@ use App\Http\Controllers\Login\LoginController;
 use App\Http\Controllers\Register\RegisterController;
 use App\Http\Controllers\Pengaturan\UserController;
 use App\Http\Controllers\Pengaturan\AtasanPegawaiController;
+use App\Http\Controllers\Ijin\IjinController;
 
 // ─── Redirect root ──────────────────────────────────────────────────────────────
 Route::get('/', fn() => redirect()->route('dashboard'));
@@ -46,6 +47,18 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/ess/checkout',  [AbsensiController::class,   'checkOut'])->name('ess.checkout');
     Route::post('/ess/cuti',      [DashboardController::class, 'essStoreCuti'])->name('ess.cuti.store');
     Route::get('/ess/payroll/{slip}/pdf', [DashboardController::class, 'essSlipPdf'])->name('ess.payroll.pdf');
+
+    // ── Ijin — semua role (karyawan submit, 2-level approval) ────────────────
+    Route::prefix('ijin')->name('ijin.')->group(function () {
+        Route::get('/{jenis}',                    [IjinController::class, 'index'])->name('index');
+        Route::get('/{jenis}/buat',               [IjinController::class, 'create'])->name('create');
+        Route::post('/{jenis}',                   [IjinController::class, 'store'])->name('store');
+        Route::get('/{jenis}/{ijin}',             [IjinController::class, 'show'])->name('show');
+        Route::post('/{ijin}/approve-atasan',     [IjinController::class, 'approveAtasan'])->name('approve.atasan');
+        Route::post('/{ijin}/tolak-atasan',       [IjinController::class, 'tolakAtasan'])->name('tolak.atasan');
+        Route::post('/{ijin}/approve-hrd',        [IjinController::class, 'approveHrd'])->name('approve.hrd');
+        Route::post('/{ijin}/tolak-hrd',          [IjinController::class, 'tolakHrd'])->name('tolak.hrd');
+    });
 
     // ── Cuti — semua role (karyawan submit, atasan/hrd approve; controller filter) ─
     Route::prefix('cuti')->name('cuti.')->middleware('feature:cuti')->group(function () {
