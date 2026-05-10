@@ -11,7 +11,6 @@ use App\Models\IHTPeserta;
 use App\Models\TrainingEksternal;
 use App\Models\SlipGaji;
 use App\Models\AtasanPegawai;
-use App\Models\Lembur;
 use App\Models\PengajuanIjin;
 use App\Models\TarifLembur;
 use App\Models\HrNotification;
@@ -60,6 +59,10 @@ class DashboardController extends Controller
             'lembur_menunggu'   => $this->safe(fn() => $isAtasan
                 ? Lembur::menungguApproval()->whereIn('pegawai_id', $pegawaiIds)->count()
                 : Lembur::menungguApproval()->count()),
+
+            'ijin_menunggu'     => $this->safe(fn() => $isAtasan
+                ? PengajuanIjin::menungguApproval()->whereIn('nik', $nikBawahan)->count()
+                : PengajuanIjin::menungguApproval()->count()),
 
             'lowongan_buka'     => $this->safe(fn() => Rekrutmen::buka()->count()),
             'training_berjalan' => $this->safe(fn() => \App\Models\IHT::where('status', 'aktif')->count()),

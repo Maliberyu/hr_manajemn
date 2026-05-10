@@ -10,7 +10,7 @@ class CheckFeature
     public function handle(Request $request, Closure $next, string $feature): mixed
     {
         if (!config("features.{$feature}", true)) {
-            $msg = 'Fitur ini belum tersedia, masih dalam pengembangan oleh developer ganteng kita 😎';
+            $msg = 'Fitur ini belum tersedia, masih dalam pengembangan.';
 
             if ($request->expectsJson()) {
                 return response()->json(['message' => $msg], 503);

@@ -202,7 +202,7 @@ class IjinController extends Controller
         ]);
 
         HrNotification::kirimKePegawai($ijin->nik, 'ijin_approved',
-            $ijin->label_jenis . ' Disetujui ✓', "Pengajuan {$ijin->no_pengajuan} telah disetujui HRD.",
+            $ijin->label_jenis . ' Disetujui', "Pengajuan {$ijin->no_pengajuan} telah disetujui HRD.",
             route('ijin.show', [$ijin->jenis, $ijin]));
 
         return back()->with('success', 'Ijin ' . $ijin->label_jenis . ' telah disetujui.');

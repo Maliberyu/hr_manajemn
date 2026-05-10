@@ -174,7 +174,7 @@
                           class="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none mb-2 resize-none"></textarea>
                 <button type="submit"
                         class="w-full py-2 text-sm bg-green-600 hover:bg-green-700 text-white rounded-xl font-semibold transition">
-                    ✓ Setujui
+                    Setujui
                 </button>
             </form>
             <form method="POST" action="{{ parse_url(route('ijin.tolak.atasan', $ijin), PHP_URL_PATH) }}">
@@ -183,7 +183,7 @@
                           class="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none mb-2 resize-none"></textarea>
                 <button type="submit"
                         class="w-full py-2 text-sm bg-red-500 hover:bg-red-600 text-white rounded-xl font-semibold transition">
-                    ✗ Tolak
+                    Tolak
                 </button>
             </form>
         </div>
@@ -200,7 +200,7 @@
                           class="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none mb-2 resize-none"></textarea>
                 <button type="submit"
                         class="w-full py-2 text-sm bg-green-600 hover:bg-green-700 text-white rounded-xl font-semibold transition">
-                    ✓ Setujui
+                    Setujui
                 </button>
             </form>
             <form method="POST" action="{{ parse_url(route('ijin.tolak.hrd', $ijin), PHP_URL_PATH) }}">
@@ -209,7 +209,7 @@
                           class="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none mb-2 resize-none"></textarea>
                 <button type="submit"
                         class="w-full py-2 text-sm bg-red-500 hover:bg-red-600 text-white rounded-xl font-semibold transition">
-                    ✗ Tolak
+                    Tolak
                 </button>
             </form>
         </div>

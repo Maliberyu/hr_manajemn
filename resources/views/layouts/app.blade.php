@@ -235,7 +235,7 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
             </svg>
             <span x-show="sidebarOpen" class="whitespace-nowrap flex-1 text-left">Cuti & Ijin</span>
-            <span x-show="sidebarOpen" class="text-xs opacity-60">🔒</span>
+            <svg x-show="sidebarOpen" class="w-3.5 h-3.5 opacity-50 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
         </button>
         @else
         <button @click="open = !open"
@@ -305,7 +305,7 @@
                 <path stroke-width="2" d="M19 9l-7 7-7-7"/>
             </svg>
             @else
-            <span x-show="sidebarOpen" class="text-xs opacity-60">🔒</span>
+            <svg x-show="sidebarOpen" class="w-3.5 h-3.5 opacity-50 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
             @endif
         </button>
         @if(config('features.cuti', true))
@@ -366,7 +366,7 @@
                 <path stroke-width="2" d="M19 9l-7 7-7-7"/>
             </svg>
             @else
-            <span x-show="sidebarOpen" class="text-xs opacity-60">🔒</span>
+            <svg x-show="sidebarOpen" class="w-3.5 h-3.5 opacity-50 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
             @endif
         </button>
         @if(config('features.cuti', true))
@@ -666,53 +666,24 @@
          x-transition:leave-end="opacity-0 scale-90"
          class="bg-white rounded-2xl p-6 w-[320px] shadow-2xl text-center">
 
-        <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-yellow-100 flex items-center justify-center text-3xl">
-            Sorry!
+        <div class="w-14 h-14 mx-auto mb-4 rounded-2xl bg-orange-100 flex items-center justify-center">
+            <svg class="w-7 h-7 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+            </svg>
         </div>
 
-        <h3 class="text-lg font-bold text-gray-800 mb-2">
-            Fitur Belum Tersedia
-        </h3>
+        <h3 class="text-base font-bold text-gray-800 mb-2">Fitur Belum Tersedia</h3>
 
         <p class="text-sm text-gray-500 leading-relaxed mb-5">
-            Masih dalam pengembangan develover ganteng wkwkkw
+            Fitur ini masih dalam tahap pengembangan.
         </p>
 
         <button @click="featureModal = false"
                 class="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold text-sm transition">
-            OK
+            OK, Mengerti
         </button>
     </div>
 </div>
-    <!-- <div x-show="featureModal"
-         x-transition:enter="transition ease-out duration-200"
-         x-transition:enter-start="opacity-0"
-         x-transition:enter-end="opacity-100"
-         x-transition:leave="transition ease-in duration-150"
-         x-transition:leave-start="opacity-100"
-         x-transition:leave-end="opacity-0"
-         class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4"
-         style="display:none"
-         @click.self="featureModal = false">
-        <div x-show="featureModal"
-             x-transition:enter="transition ease-out duration-200"
-             x-transition:enter-start="opacity-0 scale-90"
-             x-transition:enter-end="opacity-100 scale-100"
-             x-transition:leave="transition ease-in duration-150"
-             x-transition:leave-start="opacity-100 scale-100"
-             x-transition:leave-end="opacity-0 scale-90"
-             class="bg-white rounded-2xl p-7 max-w-xs w-full shadow-2xl text-center">
-            <div class="text-5xl mb-4">!</div>
-            <h3 class="text-base font-bold text-gray-800 mb-2">Fitur Belum Tersedia</h3>
-            <p class="text-sm text-gray-500 leading-relaxed mb-6">
-                Masih dalam pengembangan oleh developer ganteng kita semua wkkwwk
-            </p>
-            <button @click="featureModal = false"
-                    class="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold text-sm transition">
-                OK, Mengerti
-            </button>
-        </div>
-    </div> -->
 
     {{-- ── Toast: Feature Disabled (fallback akses langsung via URL) ──────── --}}
     @if(session('feature_disabled'))
@@ -727,7 +698,7 @@
          x-transition:leave-end="opacity-0 translate-y-4"
          class="fixed bottom-5 left-1/2 -translate-x-1/2 z-50 w-full max-w-sm px-4">
         <div class="bg-gray-900 text-white px-5 py-3.5 rounded-2xl shadow-xl flex items-start gap-3">
-            <span class="text-xl flex-shrink-0">🚧</span>
+            <svg class="w-5 h-5 text-orange-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
             <p class="text-sm leading-relaxed flex-1">{{ session('feature_disabled') }}</p>
             <button @click="show = false" class="text-gray-400 hover:text-white transition flex-shrink-0 mt-0.5">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

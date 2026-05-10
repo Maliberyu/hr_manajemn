@@ -40,9 +40,9 @@ class PengajuanIjin extends Model
     ];
 
     const JENIS_ICON = [
-        'sakit'         => '🤒',
-        'terlambat'     => '⏰',
-        'pulang_duluan' => '🏃',
+        'sakit'         => 'S',
+        'terlambat'     => 'T',
+        'pulang_duluan' => 'P',
     ];
 
     // ─── Scopes ────────────────────────────────────────────────────────────────

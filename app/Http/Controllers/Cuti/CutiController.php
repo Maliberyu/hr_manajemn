@@ -189,7 +189,7 @@ class CutiController extends Controller
         Pegawai::where('nik', $cuti->nik)->increment('cuti_diambil', $cuti->jumlah);
 
         HrNotification::kirimKePegawai($cuti->nik, 'cuti_approved',
-            'Cuti Disetujui ✓', "Pengajuan {$cuti->no_pengajuan} ({$cuti->jumlah} hari) telah disetujui HRD.", route('cuti.show', $cuti));
+            'Cuti Disetujui', "Pengajuan {$cuti->no_pengajuan} ({$cuti->jumlah} hari) telah disetujui HRD.", route('cuti.show', $cuti));
 
         return back()->with('success', "Pengajuan {$cuti->no_pengajuan} DISETUJUI. Saldo cuti dikurangi {$cuti->jumlah} hari.");
     }

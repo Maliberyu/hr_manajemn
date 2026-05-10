@@ -144,7 +144,8 @@
                     <template x-if="lokasiku">
                         <div>
                             <p class="text-sm font-medium text-gray-800">
-                                <span x-text="statusRadius ? '✅ Dalam radius' : '⚠ Di luar radius'"></span>
+                                <span x-text="statusRadius ? 'Dalam radius' : 'Di luar radius'"
+                                      :class="statusRadius ? 'text-green-600' : 'text-orange-500'"></span>
                             </p>
                             <p class="text-xs text-gray-400">
                                 Jarak: <span x-text="jarakMeter + ' m'"></span>
@@ -242,7 +243,7 @@
                                    {{ !$absensiHariIni ? 'bg-green-600 hover:bg-green-700' : 'bg-blue-600 hover:bg-blue-700' }}"
                             :class="loading ? 'opacity-60 cursor-not-allowed' : ''">
                         <span x-show="!loading">
-                            ✓ {{ !$absensiHariIni ? 'Konfirmasi Check-In' : 'Konfirmasi Check-Out' }}
+                            {{ !$absensiHariIni ? 'Konfirmasi Check-In' : 'Konfirmasi Check-Out' }}
                         </span>
                         <span x-show="loading">Memproses...</span>
                     </button>
@@ -253,7 +254,7 @@
         <canvas x-ref="canvas" style="display:none"></canvas>
         @else
         <div class="mt-4 w-full py-4 rounded-2xl bg-gray-100 text-gray-500 font-semibold text-center text-sm">
-            ✓ Absensi hari ini sudah selesai
+            Absensi hari ini sudah selesai
         </div>
         @endif
 
@@ -504,7 +505,7 @@
             <div x-show="openForm" x-collapse class="border-t border-gray-100">
                 {{-- Pilih jenis --}}
                 <div class="px-4 pt-4 flex gap-2">
-                    @foreach(['sakit' => '🤒 Sakit', 'terlambat' => '⏰ Terlambat', 'pulang_duluan' => '🏃 Pulang Duluan'] as $k => $v)
+                    @foreach(['sakit' => 'Sakit', 'terlambat' => 'Terlambat', 'pulang_duluan' => 'Pulang Duluan'] as $k => $v)
                     <button type="button" @click="jenisIjin = '{{ $k }}'"
                             :class="jenisIjin === '{{ $k }}' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'"
                             class="flex-1 py-1.5 text-xs font-semibold rounded-lg transition">
@@ -745,7 +746,7 @@
 
         @if($expiringSoon > 0)
         <div class="px-4 py-3 bg-orange-50 border border-orange-200 text-orange-700 rounded-xl text-sm">
-            ⚠️ <strong>{{ $expiringSoon }}</strong> sertifikat Anda akan expired dalam 30 hari. Segera perbarui.
+            <strong>{{ $expiringSoon }}</strong> sertifikat Anda akan expired dalam 30 hari. Segera perbarui.
         </div>
         @endif
 

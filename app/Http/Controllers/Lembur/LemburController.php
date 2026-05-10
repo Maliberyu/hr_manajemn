@@ -175,7 +175,7 @@ class LemburController extends Controller
         ]);
 
         HrNotification::kirimKePegawai($lembur->pegawai?->nik ?? '', 'lembur_approved',
-            'Lembur Disetujui ✓', "Pengajuan lembur Anda telah disetujui HRD. Nominal: Rp " . number_format($lembur->nominal, 0, ',', '.'),
+            'Lembur Disetujui', "Pengajuan lembur Anda telah disetujui HRD. Nominal: Rp " . number_format($lembur->nominal, 0, ',', '.'),
             route('lembur.show', $lembur));
 
         return back()->with('success', "Lembur {$lembur->pegawai->nama} disetujui HRD.");
