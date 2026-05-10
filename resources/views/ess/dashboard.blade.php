@@ -485,6 +485,11 @@
         @if(session('ijin_success'))
         <div class="px-4 py-3 bg-green-50 border border-green-200 text-green-700 rounded-xl text-sm">{{ session('ijin_success') }}</div>
         @endif
+        @if($errors->hasAny(['alasan','file_surat']))
+        <div class="px-4 py-3 bg-red-50 border border-red-200 text-red-700 rounded-xl text-sm">
+            @foreach($errors->only(['tanggal','alasan','file_surat','jam_mulai','jam_selesai']) as $e)<p>{{ $e }}</p>@endforeach
+        </div>
+        @endif
 
         {{-- Form Pengajuan Ijin --}}
         <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden"
@@ -643,6 +648,11 @@
 
         @if(session('lembur_success'))
         <div class="px-4 py-3 bg-green-50 border border-green-200 text-green-700 rounded-xl text-sm">{{ session('lembur_success') }}</div>
+        @endif
+        @if($errors->hasAny(['keterangan','jam_mulai','jam_selesai','jenis','tanggal']) && !$errors->hasAny(['tanggal_awal','urgensi','kepentingan','alasan','file_surat']))
+        <div class="px-4 py-3 bg-red-50 border border-red-200 text-red-700 rounded-xl text-sm">
+            @foreach($errors->only(['tanggal','jam_mulai','jam_selesai','jenis','keterangan']) as $e)<p>{{ $e }}</p>@endforeach
+        </div>
         @endif
 
         {{-- Form Lembur --}}
@@ -1037,8 +1047,12 @@ function essPortal() {
                 }
             });
 
-            // Kalau ada error validasi cuti, pindah ke tab cuti
-            @if($errors->any())
+            // Pindah ke tab sesuai form yang error
+            @if($errors->hasAny(['keterangan','jam_mulai','jam_selesai','jenis']) && !$errors->hasAny(['tanggal_awal','urgensi','kepentingan']))
+            this.tab = 'lembur';
+            @elseif($errors->hasAny(['alasan','file_surat']))
+            this.tab = 'ijin';
+            @elseif($errors->any())
             this.tab = 'cuti';
             @endif
         },
