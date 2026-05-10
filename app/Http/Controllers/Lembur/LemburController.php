@@ -7,6 +7,7 @@ use App\Models\Departemen;
 use App\Models\Lembur;
 use App\Models\Pegawai;
 use App\Models\TarifLembur;
+use App\Models\HrNotification;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 
@@ -91,6 +92,16 @@ class LemburController extends Controller
             'status'     => $statusAwal,
         ]);
 
+        $lembur = Lembur::where('pegawai_id', $validated['pegawai_id'])->latest()->first();
+        $link   = $lembur ? route('lembur.show', $lembur) : '';
+        if ($adaAtasan && $peg?->nik) {
+            HrNotification::kirimKeAtasan($peg->nik, 'lembur_submitted',
+                'Pengajuan Lembur Baru', "Ada pengajuan lembur dari {$peg->nama} menunggu persetujuan Anda.", $link);
+        } else {
+            HrNotification::kirimKeHrd('lembur_submitted',
+                'Pengajuan Lembur Baru', "Ada pengajuan lembur menunggu persetujuan HRD.", $link);
+        }
+
         $pesanStatus = $adaAtasan ? '' : ' Atasan langsung belum diset — langsung ke HRD.';
         return redirect()->route('lembur.index')
             ->with('success', "Pengajuan lembur berhasil disimpan. Estimasi: Rp " . number_format($nominal, 0, ',', '.') . $pesanStatus);
@@ -118,6 +129,12 @@ class LemburController extends Controller
             'approved_atasan_at' => now(),
             'catatan_atasan'     => $request->catatan_atasan,
         ]);
+
+        $link = route('lembur.show', $lembur);
+        HrNotification::kirimKePegawai($lembur->pegawai?->nik ?? '', 'lembur_approved_atasan',
+            'Lembur Disetujui Atasan', "Pengajuan lembur Anda disetujui atasan, menunggu HRD.", $link);
+        HrNotification::kirimKeHrd('lembur_submitted',
+            'Lembur Perlu Disetujui HRD', "Lembur {$lembur->pegawai?->nama} menunggu persetujuan HRD.", $link);
 
         return back()->with('success', "Lembur {$lembur->pegawai->nama} disetujui atasan. Menunggu persetujuan HRD.");
     }
@@ -156,6 +173,10 @@ class LemburController extends Controller
             'approved_hrd_at' => now(),
             'catatan_hrd'     => $request->catatan_hrd,
         ]);
+
+        HrNotification::kirimKePegawai($lembur->pegawai?->nik ?? '', 'lembur_approved',
+            'Lembur Disetujui ✓', "Pengajuan lembur Anda telah disetujui HRD. Nominal: Rp " . number_format($lembur->nominal, 0, ',', '.'),
+            route('lembur.show', $lembur));
 
         return back()->with('success', "Lembur {$lembur->pegawai->nama} disetujui HRD.");
     }

@@ -30,7 +30,27 @@ class LoginController extends Controller
             return back()->withErrors(['email' => 'Akun tidak aktif. Hubungi administrator.'])->withInput();
         }
 
-        if (Auth::attempt($request->only('email', 'password'))) {
+        $loginOk = false;
+
+        try {
+            $loginOk = Auth::attempt($request->only('email', 'password'));
+        } catch (\RuntimeException $e) {
+            // Password lama (MD5 dari SIK) — coba verifikasi manual
+            if (str_contains($e->getMessage(), 'Bcrypt algorithm')) {
+                $legacyMatch = hash_equals($user->password, md5($request->password))
+                    || hash_equals($user->password, sha1($request->password))
+                    || $user->password === $request->password; // plain text fallback
+
+                if ($legacyMatch) {
+                    // Migrate password ke bcrypt sekarang
+                    $user->update(['password' => bcrypt($request->password)]);
+                    Auth::login($user);
+                    $loginOk = true;
+                }
+            }
+        }
+
+        if ($loginOk) {
             $request->session()->regenerate();
 
             $user->update([
@@ -38,7 +58,6 @@ class LoginController extends Controller
                 'last_login_ip' => $request->ip(),
             ]);
 
-            // Redirect berdasarkan role
             $redirect = match($user->role ?? 'karyawan') {
                 'karyawan' => route('ess.dashboard'),
                 default    => route('dashboard'),

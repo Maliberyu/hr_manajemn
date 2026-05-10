@@ -11,6 +11,10 @@ use App\Models\IHTPeserta;
 use App\Models\TrainingEksternal;
 use App\Models\SlipGaji;
 use App\Models\AtasanPegawai;
+use App\Models\Lembur;
+use App\Models\PengajuanIjin;
+use App\Models\TarifLembur;
+use App\Models\HrNotification;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -177,6 +181,25 @@ class DashboardController extends Controller
             0
         );
 
+        // Riwayat Ijin (3 terbaru per jenis)
+        $ijinSaya = $this->safe(
+            fn() => PengajuanIjin::where('nik', $pegawai->nik)
+                ->orderByDesc('tanggal')->limit(15)->get(),
+            collect()
+        );
+
+        // Riwayat Lembur
+        $lemburSaya = $this->safe(
+            fn() => Lembur::where('pegawai_id', $pegawai->id)
+                ->orderByDesc('tanggal')->limit(10)->get(),
+            collect()
+        );
+
+        $tarifLembur = $this->safe(
+            fn() => TarifLembur::getForDep($pegawai->departemen),
+            null
+        );
+
         $slipGaji = $this->safe(
             fn() => SlipGaji::where('pegawai_id', $pegawai->id)
                 ->final()
@@ -189,8 +212,102 @@ class DashboardController extends Controller
 
         return view('ess.dashboard', compact(
             'pegawai', 'absensiHariIni', 'cutiSaya', 'sisaCuti', 'pegawaiPj',
-            'trainingIHT', 'trainingEksternal', 'expiringSoon', 'slipGaji'
+            'trainingIHT', 'trainingEksternal', 'expiringSoon', 'slipGaji',
+            'ijinSaya', 'lemburSaya', 'tarifLembur'
         ));
+    }
+
+    public function essStoreLembur(Request $request)
+    {
+        $pegawai = auth()->user()->pegawai;
+        abort_unless($pegawai, 403);
+
+        $validated = $request->validate([
+            'tanggal'     => 'required|date',
+            'jam_mulai'   => 'required|date_format:H:i',
+            'jam_selesai' => 'required|date_format:H:i|after:jam_mulai',
+            'jenis'       => 'required|in:HB,HR',
+            'keterangan'  => 'required|max:255',
+        ]);
+
+        $durasi  = \Carbon\Carbon::parse($validated['jam_mulai'])
+                    ->diffInMinutes(\Carbon\Carbon::parse($validated['jam_selesai'])) / 60;
+        $tarif   = TarifLembur::getForDep($pegawai->departemen);
+        $nominal = $durasi * ($validated['jenis'] === 'HR' ? ($tarif?->tarif_hr ?? 0) : ($tarif?->tarif_hb ?? 0));
+
+        $adaAtasan  = AtasanPegawai::where('nik', $pegawai->nik)->exists();
+        $lembur = Lembur::create([
+            'pegawai_id'  => $pegawai->id,
+            'tanggal'     => $validated['tanggal'],
+            'jam_mulai'   => $validated['jam_mulai'],
+            'jam_selesai' => $validated['jam_selesai'],
+            'durasi_jam'  => round($durasi, 2),
+            'jenis'       => $validated['jenis'],
+            'keterangan'  => $validated['keterangan'],
+            'nominal'     => $nominal,
+            'status'      => $adaAtasan ? 'Menunggu Atasan' : 'Menunggu HRD',
+        ]);
+
+        $link = route('lembur.show', $lembur);
+        if ($adaAtasan) {
+            HrNotification::kirimKeAtasan($pegawai->nik, 'lembur_submitted',
+                'Pengajuan Lembur Baru', "Ada pengajuan lembur dari {$pegawai->nama} menunggu persetujuan Anda.", $link);
+        } else {
+            HrNotification::kirimKeHrd('lembur_submitted', 'Pengajuan Lembur Baru',
+                "Pengajuan lembur dari {$pegawai->nama} menunggu persetujuan HRD.", $link);
+        }
+
+        return redirect()->route('ess.dashboard', ['tab' => 'lembur'])
+            ->with('lembur_success', 'Pengajuan lembur berhasil diajukan.');
+    }
+
+    public function essStoreIjin(Request $request, string $jenis)
+    {
+        $pegawai = auth()->user()->pegawai;
+        abort_unless($pegawai, 403);
+        abort_unless(array_key_exists($jenis, PengajuanIjin::JENIS), 404);
+
+        $rules = ['tanggal' => 'required|date', 'alasan' => 'required|max:500'];
+        if ($jenis === 'sakit') {
+            $rules['file_surat'] = 'required|file|mimes:pdf,jpg,jpeg,png|max:2048';
+        }
+        if (in_array($jenis, ['terlambat', 'pulang_duluan'])) {
+            $rules['jam_mulai']   = 'required|date_format:H:i';
+            $rules['jam_selesai'] = 'required|date_format:H:i';
+        }
+        $validated = $request->validate($rules);
+
+        $durasi = null;
+        if (!empty($validated['jam_mulai']) && !empty($validated['jam_selesai'])) {
+            $durasi = abs(\Carbon\Carbon::parse($validated['jam_mulai'])->diffInMinutes(\Carbon\Carbon::parse($validated['jam_selesai'])));
+        }
+
+        $filePath = null;
+        if ($jenis === 'sakit' && $request->hasFile('file_surat')) {
+            $filePath = $request->file('file_surat')->store('ijin/surat/' . now()->format('Ym'), 'public');
+        }
+
+        $ijin = PengajuanIjin::create([
+            'no_pengajuan' => PengajuanIjin::generateNomor($jenis),
+            'nik'          => $pegawai->nik,
+            'pegawai_id'   => $pegawai->id,
+            'tanggal'      => $validated['tanggal'],
+            'jenis'        => $jenis,
+            'jam_mulai'    => $validated['jam_mulai'] ?? null,
+            'jam_selesai'  => $validated['jam_selesai'] ?? null,
+            'durasi_menit' => $durasi,
+            'alasan'       => $validated['alasan'],
+            'file_surat'   => $filePath,
+            'status'       => 'Menunggu Atasan',
+        ]);
+
+        HrNotification::kirimKeAtasan($pegawai->nik, 'ijin_submitted',
+            PengajuanIjin::JENIS[$jenis] . ' Baru',
+            "Ada pengajuan " . strtolower(PengajuanIjin::JENIS[$jenis]) . " dari {$pegawai->nama}.",
+            route('ijin.show', [$jenis, $ijin]));
+
+        return redirect()->route('ess.dashboard', ['tab' => 'ijin'])
+            ->with('ijin_success', 'Pengajuan ' . PengajuanIjin::JENIS[$jenis] . ' berhasil diajukan.');
     }
 
     public function essSlipPdf(SlipGaji $slip)

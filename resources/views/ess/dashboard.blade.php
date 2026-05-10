@@ -35,7 +35,7 @@
     </div>
 
     {{-- ── Tab Bar ──────────────────────────────────────────────────────── --}}
-    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-1 flex gap-1">
+    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-1 flex gap-1 overflow-x-auto">
         <button @click="tab = 'absensi'"
                 :class="tab === 'absensi'
                     ? 'bg-blue-600 text-white shadow-sm'
@@ -72,11 +72,25 @@
             <span class="w-1.5 h-1.5 rounded-full bg-orange-400 flex-shrink-0"></span>
             @endif
         </button>
+        <button @click="tab = 'ijin'"
+                :class="tab === 'ijin' ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-500 hover:bg-gray-50'"
+                class="flex-1 py-2 text-sm font-semibold rounded-xl transition flex items-center justify-center gap-1.5 whitespace-nowrap">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+            </svg>
+            Ijin
+        </button>
+        <button @click="tab = 'lembur'"
+                :class="tab === 'lembur' ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-500 hover:bg-gray-50'"
+                class="flex-1 py-2 text-sm font-semibold rounded-xl transition flex items-center justify-center gap-1.5 whitespace-nowrap">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+            </svg>
+            Lembur
+        </button>
         <button @click="tab = 'payroll'"
-                :class="tab === 'payroll'
-                    ? 'bg-blue-600 text-white shadow-sm'
-                    : 'text-gray-500 hover:bg-gray-50'"
-                class="flex-1 py-2 text-sm font-semibold rounded-xl transition flex items-center justify-center gap-1.5">
+                :class="tab === 'payroll' ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-500 hover:bg-gray-50'"
+                class="flex-1 py-2 text-sm font-semibold rounded-xl transition flex items-center justify-center gap-1.5 whitespace-nowrap">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/>
             </svg>
@@ -461,6 +475,268 @@
         </div>
 
     </div>{{-- end tab cuti --}}
+
+    {{-- ════════════════════════════════════════════════════════════════════ --}}
+    {{-- TAB IJIN                                                             --}}
+    {{-- ════════════════════════════════════════════════════════════════════ --}}
+    <div x-show="tab === 'ijin'" x-cloak class="space-y-4">
+
+        @if(session('ijin_success'))
+        <div class="px-4 py-3 bg-green-50 border border-green-200 text-green-700 rounded-xl text-sm">{{ session('ijin_success') }}</div>
+        @endif
+
+        {{-- Form Pengajuan Ijin --}}
+        <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden"
+             x-data="{ openForm: false, jenisIjin: 'sakit' }">
+            <button type="button" @click="openForm = !openForm"
+                    class="w-full px-4 py-3.5 flex items-center justify-between text-sm font-semibold text-gray-700 hover:bg-gray-50 transition">
+                <span class="flex items-center gap-2">
+                    <svg class="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                    </svg>
+                    Ajukan Ijin Baru
+                </span>
+                <svg class="w-4 h-4 text-gray-400 transition-transform" :class="openForm ? 'rotate-180' : ''"
+                     fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                </svg>
+            </button>
+            <div x-show="openForm" x-collapse class="border-t border-gray-100">
+                {{-- Pilih jenis --}}
+                <div class="px-4 pt-4 flex gap-2">
+                    @foreach(['sakit' => '🤒 Sakit', 'terlambat' => '⏰ Terlambat', 'pulang_duluan' => '🏃 Pulang Duluan'] as $k => $v)
+                    <button type="button" @click="jenisIjin = '{{ $k }}'"
+                            :class="jenisIjin === '{{ $k }}' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'"
+                            class="flex-1 py-1.5 text-xs font-semibold rounded-lg transition">
+                        {{ $v }}
+                    </button>
+                    @endforeach
+                </div>
+
+                {{-- Form sakit --}}
+                <template x-if="jenisIjin === 'sakit'">
+                    <form method="POST" action="{{ parse_url(route('ess.ijin.store', 'sakit'), PHP_URL_PATH) }}"
+                          enctype="multipart/form-data" class="p-4 space-y-3">
+                        @csrf
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">Tanggal <span class="text-red-500">*</span></label>
+                            <input type="date" name="tanggal" required value="{{ today()->format('Y-m-d') }}"
+                                   class="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">Keluhan / Diagnosis <span class="text-red-500">*</span></label>
+                            <textarea name="alasan" required rows="2" maxlength="500" placeholder="Contoh: Demam, flu..."
+                                      class="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none"></textarea>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">Surat Sakit <span class="text-red-500">*</span></label>
+                            <input type="file" name="file_surat" required accept=".pdf,.jpg,.jpeg,.png"
+                                   class="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl bg-white focus:outline-none">
+                            <p class="text-xs text-gray-400 mt-1">PDF/JPG/PNG, maks 2MB</p>
+                        </div>
+                        <button type="submit" class="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-semibold transition">
+                            Ajukan Ijin Sakit
+                        </button>
+                    </form>
+                </template>
+
+                {{-- Form terlambat --}}
+                <template x-if="jenisIjin === 'terlambat'">
+                    <form method="POST" action="{{ parse_url(route('ess.ijin.store', 'terlambat'), PHP_URL_PATH) }}"
+                          class="p-4 space-y-3">
+                        @csrf
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">Tanggal <span class="text-red-500">*</span></label>
+                            <input type="date" name="tanggal" required value="{{ today()->format('Y-m-d') }}"
+                                   class="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400">
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs font-medium text-gray-600 mb-1">Jam Masuk Shift <span class="text-red-500">*</span></label>
+                                <input type="time" name="jam_mulai" required
+                                       class="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-gray-600 mb-1">Jam Tiba <span class="text-red-500">*</span></label>
+                                <input type="time" name="jam_selesai" required
+                                       class="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">Alasan <span class="text-red-500">*</span></label>
+                            <textarea name="alasan" required rows="2" maxlength="500"
+                                      class="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none"></textarea>
+                        </div>
+                        <button type="submit" class="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-semibold transition">
+                            Ajukan Ijin Terlambat
+                        </button>
+                    </form>
+                </template>
+
+                {{-- Form pulang duluan --}}
+                <template x-if="jenisIjin === 'pulang_duluan'">
+                    <form method="POST" action="{{ parse_url(route('ess.ijin.store', 'pulang_duluan'), PHP_URL_PATH) }}"
+                          class="p-4 space-y-3">
+                        @csrf
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">Tanggal <span class="text-red-500">*</span></label>
+                            <input type="date" name="tanggal" required value="{{ today()->format('Y-m-d') }}"
+                                   class="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400">
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs font-medium text-gray-600 mb-1">Jam Pulang Duluan <span class="text-red-500">*</span></label>
+                                <input type="time" name="jam_mulai" required
+                                       class="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-gray-600 mb-1">Jam Keluar Seharusnya <span class="text-red-500">*</span></label>
+                                <input type="time" name="jam_selesai" required
+                                       class="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">Alasan <span class="text-red-500">*</span></label>
+                            <textarea name="alasan" required rows="2" maxlength="500"
+                                      class="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none"></textarea>
+                        </div>
+                        <button type="submit" class="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-semibold transition">
+                            Ajukan Pulang Duluan
+                        </button>
+                    </form>
+                </template>
+            </div>
+        </div>
+
+        {{-- Riwayat Ijin --}}
+        <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+            <div class="px-4 py-3.5 border-b border-gray-100">
+                <p class="text-sm font-semibold text-gray-700">Riwayat Ijin</p>
+            </div>
+            @if($ijinSaya->isEmpty())
+            <p class="text-sm text-gray-400 text-center py-8">Belum ada pengajuan ijin.</p>
+            @else
+            <ul class="divide-y divide-gray-50">
+                @foreach($ijinSaya as $ij)
+                @php $sc = ['Disetujui'=>'bg-green-100 text-green-700','Menunggu Atasan'=>'bg-yellow-100 text-yellow-700','Menunggu HRD'=>'bg-blue-100 text-blue-700','Ditolak Atasan'=>'bg-red-100 text-red-600','Ditolak HRD'=>'bg-red-100 text-red-600'][$ij->status] ?? 'bg-gray-100 text-gray-600'; @endphp
+                <li class="px-4 py-3 flex items-center gap-3">
+                    <span class="text-xl flex-shrink-0">{{ \App\Models\PengajuanIjin::JENIS_ICON[$ij->jenis] }}</span>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm font-medium text-gray-800">{{ $ij->label_jenis }}</p>
+                        <p class="text-xs text-gray-500">{{ $ij->tanggal->translatedFormat('d M Y') }}
+                            @if($ij->durasi_menit) · {{ $ij->durasi_label }} @endif
+                        </p>
+                    </div>
+                    <span class="text-xs font-medium px-2 py-0.5 rounded-full {{ $sc }} whitespace-nowrap">{{ $ij->status }}</span>
+                </li>
+                @endforeach
+            </ul>
+            @endif
+        </div>
+    </div>{{-- end tab ijin --}}
+
+    {{-- ════════════════════════════════════════════════════════════════════ --}}
+    {{-- TAB LEMBUR                                                           --}}
+    {{-- ════════════════════════════════════════════════════════════════════ --}}
+    <div x-show="tab === 'lembur'" x-cloak class="space-y-4">
+
+        @if(session('lembur_success'))
+        <div class="px-4 py-3 bg-green-50 border border-green-200 text-green-700 rounded-xl text-sm">{{ session('lembur_success') }}</div>
+        @endif
+
+        {{-- Form Lembur --}}
+        <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden"
+             x-data="{ open: false }">
+            <button type="button" @click="open = !open"
+                    class="w-full px-4 py-3.5 flex items-center justify-between text-sm font-semibold text-gray-700 hover:bg-gray-50 transition">
+                <span class="flex items-center gap-2">
+                    <svg class="w-4 h-4 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                    </svg>
+                    Ajukan Lembur
+                </span>
+                <svg class="w-4 h-4 text-gray-400 transition-transform" :class="open ? 'rotate-180' : ''"
+                     fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                </svg>
+            </button>
+            <div x-show="open" x-collapse class="border-t border-gray-100">
+                <form method="POST" action="{{ parse_url(route('ess.lembur.store'), PHP_URL_PATH) }}"
+                      class="p-4 space-y-3">
+                    @csrf
+                    <div>
+                        <label class="block text-xs font-medium text-gray-600 mb-1">Tanggal <span class="text-red-500">*</span></label>
+                        <input type="date" name="tanggal" required value="{{ old('tanggal', today()->format('Y-m-d')) }}"
+                               class="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400">
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">Jam Mulai <span class="text-red-500">*</span></label>
+                            <input type="time" name="jam_mulai" required value="{{ old('jam_mulai') }}"
+                                   class="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">Jam Selesai <span class="text-red-500">*</span></label>
+                            <input type="time" name="jam_selesai" required value="{{ old('jam_selesai') }}"
+                                   class="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-600 mb-1">Jenis Lembur <span class="text-red-500">*</span></label>
+                        <select name="jenis" required
+                                class="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-blue-400">
+                            <option value="HB">Hari Biasa</option>
+                            <option value="HR">Hari Raya / Libur</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-600 mb-1">Keterangan Pekerjaan <span class="text-red-500">*</span></label>
+                        <textarea name="keterangan" required rows="2" maxlength="255"
+                                  class="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none">{{ old('keterangan') }}</textarea>
+                    </div>
+                    <button type="submit"
+                            class="w-full py-2.5 bg-orange-500 hover:bg-orange-600 text-white rounded-xl text-sm font-semibold transition">
+                        Ajukan Lembur
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        {{-- Riwayat Lembur --}}
+        <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+            <div class="px-4 py-3.5 border-b border-gray-100">
+                <p class="text-sm font-semibold text-gray-700">Riwayat Lembur</p>
+            </div>
+            @if($lemburSaya->isEmpty())
+            <p class="text-sm text-gray-400 text-center py-8">Belum ada pengajuan lembur.</p>
+            @else
+            <ul class="divide-y divide-gray-50">
+                @foreach($lemburSaya as $lb)
+                @php $sc = ['Disetujui'=>'bg-green-100 text-green-700','Menunggu Atasan'=>'bg-yellow-100 text-yellow-700','Menunggu HRD'=>'bg-blue-100 text-blue-700','Ditolak Atasan'=>'bg-red-100 text-red-600','Ditolak HRD'=>'bg-red-100 text-red-600'][$lb->status] ?? 'bg-gray-100 text-gray-600'; @endphp
+                <li class="px-4 py-3 flex items-center gap-3">
+                    <div class="w-9 h-9 bg-orange-50 rounded-xl flex items-center justify-center flex-shrink-0">
+                        <svg class="w-4 h-4 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                        </svg>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm font-medium text-gray-800">
+                            {{ $lb->tanggal->translatedFormat('d M Y') }}
+                            <span class="text-xs text-gray-400 ml-1">{{ \App\Models\Lembur::JENIS[$lb->jenis] }}</span>
+                        </p>
+                        <p class="text-xs text-gray-500">
+                            {{ \Carbon\Carbon::parse($lb->jam_mulai)->format('H:i') }}–{{ \Carbon\Carbon::parse($lb->jam_selesai)->format('H:i') }}
+                            · {{ $lb->durasi_label }}
+                            @if($lb->nominal > 0) · Rp {{ number_format($lb->nominal,0,',','.') }} @endif
+                        </p>
+                    </div>
+                    <span class="text-xs font-medium px-2 py-0.5 rounded-full {{ $sc }} whitespace-nowrap">{{ $lb->status }}</span>
+                </li>
+                @endforeach
+            </ul>
+            @endif
+        </div>
+    </div>{{-- end tab lembur --}}
 
     {{-- ════════════════════════════════════════════════════════════════════ --}}
     {{-- TAB TRAINING                                                         --}}

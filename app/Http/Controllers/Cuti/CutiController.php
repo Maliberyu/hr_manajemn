@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Cuti;
 use App\Http\Controllers\Controller;
 use App\Models\PengajuanCuti;
 use App\Models\Pegawai;
+use App\Models\HrNotification;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 
@@ -98,6 +99,15 @@ class CutiController extends Controller
             'status'       => $statusAwal,
         ]);
 
+        $link = route('cuti.show', PengajuanCuti::where('no_pengajuan', $noPengajuan)->first());
+        if ($adaAtasan) {
+            HrNotification::kirimKeAtasan($validated['nik'], 'cuti_submitted',
+                'Pengajuan Cuti Baru', "Ada pengajuan cuti {$noPengajuan} menunggu persetujuan Anda.", $link);
+        } else {
+            HrNotification::kirimKeHrd('cuti_submitted',
+                'Pengajuan Cuti Baru', "Ada pengajuan cuti {$noPengajuan} menunggu persetujuan HRD.", $link);
+        }
+
         $pesanStatus = $adaAtasan
             ? "Menunggu persetujuan atasan langsung."
             : "Atasan langsung belum diset — pengajuan langsung diteruskan ke HRD.";
@@ -130,6 +140,12 @@ class CutiController extends Controller
             'approved_atasan_at' => now(),
         ]);
 
+        $link = route('cuti.show', $cuti);
+        HrNotification::kirimKePegawai($cuti->nik, 'cuti_approved_atasan',
+            'Cuti Disetujui Atasan', "Pengajuan {$cuti->no_pengajuan} disetujui atasan, menunggu HRD.", $link);
+        HrNotification::kirimKeHrd('cuti_submitted',
+            'Pengajuan Cuti Perlu Disetujui', "Pengajuan cuti {$cuti->no_pengajuan} menunggu persetujuan HRD.", $link);
+
         return back()->with('success', "Disetujui atasan. Pengajuan {$cuti->no_pengajuan} diteruskan ke HRD.");
     }
 
@@ -147,6 +163,9 @@ class CutiController extends Controller
             'status'         => 'Ditolak Atasan',
             'catatan_atasan' => $request->catatan_atasan,
         ]);
+
+        HrNotification::kirimKePegawai($cuti->nik, 'cuti_rejected',
+            'Cuti Ditolak', "Pengajuan {$cuti->no_pengajuan} ditolak atasan. Alasan: {$request->catatan_atasan}", route('cuti.show', $cuti));
 
         return back()->with('success', "Pengajuan {$cuti->no_pengajuan} ditolak oleh atasan langsung.");
     }
@@ -168,6 +187,9 @@ class CutiController extends Controller
         ]);
 
         Pegawai::where('nik', $cuti->nik)->increment('cuti_diambil', $cuti->jumlah);
+
+        HrNotification::kirimKePegawai($cuti->nik, 'cuti_approved',
+            'Cuti Disetujui ✓', "Pengajuan {$cuti->no_pengajuan} ({$cuti->jumlah} hari) telah disetujui HRD.", route('cuti.show', $cuti));
 
         return back()->with('success', "Pengajuan {$cuti->no_pengajuan} DISETUJUI. Saldo cuti dikurangi {$cuti->jumlah} hari.");
     }

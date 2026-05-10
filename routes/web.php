@@ -21,6 +21,7 @@ use App\Http\Controllers\Register\RegisterController;
 use App\Http\Controllers\Pengaturan\UserController;
 use App\Http\Controllers\Pengaturan\AtasanPegawaiController;
 use App\Http\Controllers\Ijin\IjinController;
+use App\Http\Controllers\NotificationController;
 
 // ─── Redirect root ──────────────────────────────────────────────────────────────
 Route::get('/', fn() => redirect()->route('dashboard'));
@@ -46,7 +47,17 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/ess/checkin',   [AbsensiController::class,   'checkIn'])->name('ess.checkin');
     Route::post('/ess/checkout',  [AbsensiController::class,   'checkOut'])->name('ess.checkout');
     Route::post('/ess/cuti',      [DashboardController::class, 'essStoreCuti'])->name('ess.cuti.store');
+    Route::post('/ess/lembur',    [DashboardController::class, 'essStoreLembur'])->name('ess.lembur.store');
+    Route::post('/ess/ijin/{jenis}', [DashboardController::class, 'essStoreIjin'])->name('ess.ijin.store');
     Route::get('/ess/payroll/{slip}/pdf', [DashboardController::class, 'essSlipPdf'])->name('ess.payroll.pdf');
+
+    // ── Notifikasi ─────────────────────────────────────────────────────────────
+    Route::prefix('notifikasi')->name('notifikasi.')->group(function () {
+        Route::get('/',                          [NotificationController::class, 'index'])->name('index');
+        Route::post('/baca-semua',               [NotificationController::class, 'bacaSemua'])->name('baca.semua');
+        Route::get('/{notifikasi}/baca',         [NotificationController::class, 'baca'])->name('baca');
+        Route::get('/unread-count',              [NotificationController::class, 'unreadCount'])->name('unread');
+    });
 
     // ── Ijin — semua role (karyawan submit, 2-level approval) ────────────────
     Route::prefix('ijin')->name('ijin.')->group(function () {

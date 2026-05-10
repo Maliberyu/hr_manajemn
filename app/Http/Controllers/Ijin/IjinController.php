@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\PengajuanIjin;
 use App\Models\Pegawai;
 use App\Models\AtasanPegawai;
+use App\Models\HrNotification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
@@ -127,6 +128,13 @@ class IjinController extends Controller
             'status'        => 'Menunggu Atasan',
         ]);
 
+        $saved = PengajuanIjin::where('no_pengajuan', PengajuanIjin::generateNomor($jenis))->latest()->first()
+                 ?? PengajuanIjin::where('nik', $validated['nik'])->where('jenis', $jenis)->latest()->first();
+        $link  = $saved ? route('ijin.show', [$jenis, $saved]) : '';
+        HrNotification::kirimKeAtasan($validated['nik'], 'ijin_submitted',
+            PengajuanIjin::JENIS[$jenis] . ' Baru',
+            "Ada pengajuan " . strtolower(PengajuanIjin::JENIS[$jenis]) . " menunggu persetujuan Anda.", $link);
+
         return redirect()->route('ijin.index', $jenis)
             ->with('success', 'Pengajuan ' . PengajuanIjin::JENIS[$jenis] . ' berhasil diajukan.');
     }
@@ -154,6 +162,12 @@ class IjinController extends Controller
             'approved_atasan_by'  => auth()->id(),
             'approved_atasan_at'  => now(),
         ]);
+
+        $link = route('ijin.show', [$ijin->jenis, $ijin]);
+        HrNotification::kirimKePegawai($ijin->nik, 'ijin_approved_atasan',
+            $ijin->label_jenis . ' Disetujui Atasan', "Pengajuan {$ijin->no_pengajuan} disetujui, menunggu HRD.", $link);
+        HrNotification::kirimKeHrd('ijin_submitted',
+            $ijin->label_jenis . ' Perlu Disetujui', "Pengajuan {$ijin->no_pengajuan} menunggu persetujuan HRD.", $link);
 
         return back()->with('success', 'Ijin disetujui atasan, menunggu HRD.');
     }
@@ -186,6 +200,10 @@ class IjinController extends Controller
             'approved_hrd_by' => auth()->id(),
             'approved_hrd_at' => now(),
         ]);
+
+        HrNotification::kirimKePegawai($ijin->nik, 'ijin_approved',
+            $ijin->label_jenis . ' Disetujui ✓', "Pengajuan {$ijin->no_pengajuan} telah disetujui HRD.",
+            route('ijin.show', [$ijin->jenis, $ijin]));
 
         return back()->with('success', 'Ijin ' . $ijin->label_jenis . ' telah disetujui.');
     }
