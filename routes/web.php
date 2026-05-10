@@ -22,6 +22,7 @@ use App\Http\Controllers\Pengaturan\UserController;
 use App\Http\Controllers\Pengaturan\AtasanPegawaiController;
 use App\Http\Controllers\Ijin\IjinController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\ProfileController;
 
 // ─── Redirect root ──────────────────────────────────────────────────────────────
 Route::get('/', fn() => redirect()->route('dashboard'));
@@ -41,6 +42,10 @@ Route::middleware(['auth'])->group(function () {
 
     // ── Dashboard — controller yang handle redirect per role ───────────────────
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+
+    // ── Profil User ────────────────────────────────────────────────────────────
+    Route::get('/profil',            [ProfileController::class, 'show'])->name('profil.show');
+    Route::post('/profil/password',  [ProfileController::class, 'updatePassword'])->name('profil.password');
 
     // ── ESS Portal ─────────────────────────────────────────────────────────────
     Route::get('/ess',            [DashboardController::class, 'ess'])->name('ess.dashboard');

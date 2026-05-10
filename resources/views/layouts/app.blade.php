@@ -605,7 +605,7 @@
                                 <p class="text-xs font-semibold text-gray-800 truncate">{{ auth()->user()->nama ?? '' }}</p>
                                 <p class="text-xs text-gray-400 truncate">{{ auth()->user()->email ?? '' }}</p>
                             </div>
-                            <a href="#" class="flex items-center gap-2 px-4 py-2 text-sm text-gray-600 hover:bg-gray-50">
+                            <a href="{{ route('profil.show') }}" class="flex items-center gap-2 px-4 py-2 text-sm text-gray-600 hover:bg-gray-50">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                         d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
