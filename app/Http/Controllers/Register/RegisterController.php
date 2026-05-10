@@ -3,53 +3,81 @@
 namespace App\Http\Controllers\Register;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
+use App\Models\AtasanPegawai;
+use App\Models\HrNotification;
+use App\Models\Pegawai;
 use App\Models\User;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 
 class RegisterController extends Controller
 {
-    // tampilkan halaman register 
     public function showRegister()
     {
-        return view('auth.register');
+        $calonAtasan = User::whereIn('role', ['atasan', 'hrd', 'admin'])
+            ->where('status', 'aktif')
+            ->orderBy('nama')
+            ->get(['id', 'nama', 'jabatan', 'role']);
+
+        return view('auth.register', compact('calonAtasan'));
     }
 
-    // proses register
     public function register(Request $request)
     {
-        try {
+        $request->validate([
+            'nama'           => 'required|string|max:150',
+            'email'          => 'required|email|unique:users_hr,email',
+            'jabatan'        => 'required|string|max:100',
+            'password'       => 'required|min:8|confirmed',
+            'nik'            => 'nullable|exists:pegawai,nik',
+            'atasan_user_id' => 'nullable|exists:users_hr,id',
+        ], [
+            'email.unique'     => 'Email ini sudah terdaftar.',
+            'password.min'     => 'Password minimal 8 karakter.',
+            'password.confirmed' => 'Konfirmasi password tidak cocok.',
+            'nik.exists'       => 'NIK pegawai tidak ditemukan di sistem.',
+        ]);
 
-            $request->validate([
-                'nama' => 'required|string|max:150',
-                'email' => 'required|email|unique:users_hr,email',
-                'password' => 'required|min:6|confirmed',
-                'jabatan' => 'required|string|max:100'
-            ]);
-
-            // \App\Models\User::create([
-            //     'nama' => $request->nama,
-            //     'email' => $request->email,
-            //     'password' => \Illuminate\Support\Facades\Hash::make($request->password),
-            //     'email_verified' => null,
-            //     'auth_provider' => 'local',
-            //     'status' => 'active',
-            //     'jabatan' => $request->jabatan,
-            // ]);
-            \App\Models\User::create([
-                'nama' => $request->nama,
-                'email' => $request->email,
-                'password' => Hash::make($request->password),
-                'email_verified' => null, // ✅ FIX
-                'auth_provider' => 'local',
-                'status' => 'aktif', // ✅ FIX
-                'jabatan' => $request->jabatan,
-            ]);
-
-            return redirect()->route('login')->with('success', 'Registrasi berhasil');
-        } catch (\Exception $e) {
-
-            return back()->withInput()->with('error', 'Register gagal: ' . $e->getMessage());
+        // Cek NIK tidak dipakai akun lain
+        if ($request->nik) {
+            $nikDipakai = User::where('nik', $request->nik)->exists();
+            if ($nikDipakai) {
+                return back()->withErrors(['nik' => 'NIK ini sudah terhubung ke akun lain.'])->withInput();
+            }
         }
+
+        $user = User::create([
+            'nama'          => $request->nama,
+            'email'         => $request->email,
+            'jabatan'       => $request->jabatan,
+            'nik'           => $request->nik ?: null,
+            'password'      => Hash::make($request->password),
+            'auth_provider' => 'local',
+            'status'        => 'aktif',
+            'role'          => null,  // HRD/admin yang assign role
+        ]);
+
+        // Set atasan langsung jika pegawai dipilih
+        if ($request->nik && $request->atasan_user_id) {
+            AtasanPegawai::updateOrCreate(
+                ['nik' => $request->nik],
+                ['user_id' => $request->atasan_user_id, 'keterangan' => 'Diset saat registrasi']
+            );
+        }
+
+        // Notifikasi ke semua HRD & Admin
+        $pegawaiInfo = $request->nik
+            ? ' (NIK: ' . $request->nik . ' — ' . (Pegawai::where('nik', $request->nik)->value('nama') ?? '-') . ')'
+            : '';
+
+        HrNotification::kirimKeHrd(
+            'user_registered',
+            'Pendaftaran Akun Baru',
+            "User baru \"{$user->nama}\" ({$user->email}) telah mendaftar{$pegawaiInfo}. Tentukan hak aksesnya.",
+            route('pengaturan.users.index')
+        );
+
+        return redirect()->route('login')
+            ->with('success', 'Pendaftaran berhasil! Silakan masuk. Hak akses akan ditentukan oleh HRD.');
     }
 }

@@ -44,8 +44,12 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     // ── Profil User ────────────────────────────────────────────────────────────
-    Route::get('/profil',            [ProfileController::class, 'show'])->name('profil.show');
-    Route::post('/profil/password',  [ProfileController::class, 'updatePassword'])->name('profil.password');
+    Route::get('/profil',                  [ProfileController::class, 'show'])->name('profil.show');
+    Route::get('/profil/cari-pegawai',    [ProfileController::class, 'searchPegawai'])->name('profil.search');
+    Route::post('/profil/link-pegawai',   [ProfileController::class, 'linkPegawai'])->name('profil.link');
+    Route::post('/profil/foto',           [ProfileController::class, 'updateFoto'])->name('profil.foto');
+    Route::post('/profil/atasan',         [ProfileController::class, 'updateAtasan'])->name('profil.atasan');
+    Route::post('/profil/password',       [ProfileController::class, 'updatePassword'])->name('profil.password');
 
     // ── ESS Portal ─────────────────────────────────────────────────────────────
     Route::get('/ess',            [DashboardController::class, 'ess'])->name('ess.dashboard');
