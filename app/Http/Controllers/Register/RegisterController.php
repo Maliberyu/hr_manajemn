@@ -12,6 +12,25 @@ use Illuminate\Support\Facades\Hash;
 
 class RegisterController extends Controller
 {
+    public function searchPegawai(\Illuminate\Http\Request $request)
+    {
+        $q = $request->q;
+        $pegawai = Pegawai::aktif()
+            ->where(fn($query) =>
+                $query->where('nama', 'like', "%{$q}%")
+                      ->orWhere('nik',  'like', "%{$q}%")
+            )
+            ->limit(10)
+            ->get(['id', 'nik', 'nama', 'jbtn', 'photo']);
+
+        return response()->json($pegawai->map(fn($p) => [
+            'nik'  => $p->nik,
+            'nama' => $p->nama,
+            'jbtn' => $p->jbtn,
+            'foto' => $p->foto_url,
+        ]));
+    }
+
     public function showRegister()
     {
         $calonAtasan = User::whereIn('role', ['atasan', 'hrd', 'admin'])
@@ -54,7 +73,7 @@ class RegisterController extends Controller
             'password'      => Hash::make($request->password),
             'auth_provider' => 'local',
             'status'        => 'aktif',
-            'role'          => null,  // HRD/admin yang assign role
+            'role'          => 'karyawan',  // default; HRD/admin ubah sesuai kebutuhan
         ]);
 
         // Set atasan langsung jika pegawai dipilih

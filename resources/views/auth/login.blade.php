@@ -26,6 +26,16 @@
         <div class="bg-white rounded-2xl shadow-2xl p-8">
             <h2 class="text-lg font-semibold text-gray-800 mb-6">Masuk ke Akun Anda</h2>
 
+            {{-- Success dari registrasi --}}
+            @if(session('success'))
+            <div class="flex items-start gap-3 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-xl mb-5 text-sm">
+                <svg class="w-4 h-4 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                </svg>
+                <span>{{ session('success') }}</span>
+            </div>
+            @endif
+
             {{-- Error --}}
             @if($errors->any())
             <div class="flex items-start gap-3 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl mb-5 text-sm">
@@ -101,6 +111,13 @@
                     Masuk
                 </button>
             </form>
+
+            <div class="mt-4 pt-4 border-t border-gray-100 text-center">
+                <p class="text-xs text-gray-500">
+                    Belum punya akun?
+                    <a href="{{ route('register') }}" class="text-blue-600 hover:underline font-medium">Daftar di sini</a>
+                </p>
+            </div>
         </div>
 
         <p class="text-center text-blue-200 text-xs mt-6">

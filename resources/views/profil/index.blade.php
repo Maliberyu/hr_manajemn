@@ -75,7 +75,7 @@
          x-data="profilPegawai()">
 
         <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-            <h3 class="text-sm font-semibold text-gray-700">Data Pegawai (SIK)</h3>
+            <h3 class="text-sm font-semibold text-gray-700">Data Kepegawaian</h3>
             @if($pegawai)
             <button type="button" @click="gantiMode = !gantiMode"
                     class="text-xs text-blue-600 hover:underline" x-text="gantiMode ? 'Batal' : 'Ganti'"></button>
@@ -105,7 +105,7 @@
 
             {{-- Form cari & ganti / pertama kali link --}}
             <div @if($pegawai) x-show="gantiMode" style="display:none" @endif class="space-y-3">
-                <p class="text-xs text-gray-500">Cari nama atau NIK pegawai dari database SIK:</p>
+                <p class="text-xs text-gray-500">Cari nama atau NIK pegawai dari database Kepegawaian:</p>
 
                 {{-- Search input --}}
                 <div class="relative">

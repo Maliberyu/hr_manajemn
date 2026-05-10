@@ -98,7 +98,7 @@
                         <svg class="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
                         </svg>
-                        Hubungkan ke Data Pegawai SIK
+                        Hubungkan ke Data Pegawai 
                         <span class="text-xs text-gray-400 font-normal">(opsional)</span>
                     </span>
                     <span x-show="selectedPegawai" class="text-xs text-green-600 font-semibold" x-text="selectedPegawai?.nama"></span>
@@ -109,7 +109,7 @@
                 </button>
 
                 <div x-show="showPegawai" x-collapse class="px-4 pb-4 pt-3 space-y-3 border-t border-gray-100">
-                    <p class="text-xs text-gray-500">Cari nama atau NIK Anda di database SIK untuk menghubungkan akun dengan data kepegawaian:</p>
+                    <p class="text-xs text-gray-500">Cari nama atau NIK Anda di database Kepagawaian untuk menghubungkan akun dengan data kepegawaian:</p>
 
                     <div class="relative">
                         <input type="text" x-model="queryPegawai"
@@ -235,7 +235,7 @@ function registerForm() {
             if (this.queryPegawai.length < 2) { this.hasilPegawai = []; return; }
             this.loadingPegawai = true;
             try {
-                const res = await fetch('{{ parse_url(route('profil.search'), PHP_URL_PATH) }}?q=' + encodeURIComponent(this.queryPegawai), {
+                const res = await fetch('{{ parse_url(route('register.search'), PHP_URL_PATH) }}?q=' + encodeURIComponent(this.queryPegawai), {
                     headers: { 'Accept': 'application/json' }
                 });
                 this.hasilPegawai = await res.json();

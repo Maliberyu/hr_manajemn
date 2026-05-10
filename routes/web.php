@@ -33,6 +33,7 @@ Route::post('/login',   [LoginController::class, 'login']);
 Route::post('/logout',  [LoginController::class, 'logout'])->name('logout');
 Route::get('/register', [RegisterController::class, 'showRegister'])->name('register');
 Route::post('/register',[RegisterController::class, 'register'])->name('register.post');
+Route::get('/register/cari-pegawai', [RegisterController::class, 'searchPegawai'])->name('register.search');
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // GRUP 1 — Semua user login (auth saja, semua role)
