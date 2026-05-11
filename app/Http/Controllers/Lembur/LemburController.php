@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\Departemen;
 use App\Models\Lembur;
 use App\Models\Pegawai;
+use App\Models\AtasanPegawai;
+use App\Models\User;
 use App\Models\TarifLembur;
 use App\Models\HrNotification;
 use Carbon\Carbon;
@@ -208,7 +210,15 @@ class LemburController extends Controller
         $bulan = (int) ($request->bulan ?? now()->month);
         $tahun = (int) ($request->tahun ?? now()->year);
 
+        $nikBawahanAtasan = $request->atasan_id
+            ? AtasanPegawai::nikBawahan((int) $request->atasan_id)
+            : null;
+
         $rekap = Pegawai::aktif()
+            ->when($request->departemen, fn($q, $d) => $q->where('departemen', $d))
+            ->when($request->bidang,     fn($q, $b) => $q->where('bidang', $b))
+            ->when($nikBawahanAtasan,    fn($q)     => $q->whereIn('nik', $nikBawahanAtasan))
+            ->with('departemenRef')
             ->withSum([
                 'lembur as total_jam' => fn($q) =>
                     $q->where('status', 'Disetujui')->bulan($tahun, $bulan)
@@ -225,7 +235,12 @@ class LemburController extends Controller
             ->orderByDesc('total_jam')
             ->paginate(30)->withQueryString();
 
-        return view('lembur.rekap', compact('rekap', 'bulan', 'tahun'));
+        $departemenList = Departemen::orderBy('nama')->get(['dep_id', 'nama']);
+        $bidangList     = Pegawai::aktif()->whereNotNull('bidang')->distinct()->orderBy('bidang')->pluck('bidang');
+        $atasanList     = User::whereIn('role', ['atasan', 'hrd', 'admin'])
+            ->where('status', 'aktif')->orderBy('nama')->get(['id', 'nama', 'jabatan']);
+
+        return view('lembur.rekap', compact('rekap', 'bulan', 'tahun', 'departemenList', 'bidangList', 'atasanList'));
     }
 
     // ─── Setting tarif per departemen ─────────────────────────────────────────

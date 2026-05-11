@@ -5,16 +5,87 @@ namespace App\Http\Controllers\Training;
 use App\Http\Controllers\Controller;
 use App\Models\IHT;
 use App\Models\IHTPeserta;
+use App\Models\TrainingEksternal;
 use App\Models\BerkasPegawai;
 use App\Models\MasterBerkasPegawai;
 use App\Models\Pegawai;
+use App\Models\Departemen;
+use App\Models\AtasanPegawai;
+use App\Models\User;
 use App\Models\TrainingSetting;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Barryvdh\DomPDF\Facade\Pdf;
 
 class TrainingController extends Controller
 {
+    // ── Rekap jam pelatihan per karyawan ──────────────────────────────────────
+
+    public function rekap(Request $request)
+    {
+        $tahun = (int) ($request->tahun ?? now()->year);
+
+        $nikBawahanAtasan = $request->atasan_id
+            ? AtasanPegawai::nikBawahan((int) $request->atasan_id)
+            : null;
+
+        // IHT: jam = (TIME_TO_SEC(TIMEDIFF(jam_selesai, jam_mulai)) / 3600) * durasi_hari
+        $ihtPerPegawai = DB::table('hr_iht_peserta as ip')
+            ->join('hr_iht as i', 'ip.iht_id', '=', 'i.id')
+            ->join('pegawai as p', 'ip.pegawai_id', '=', 'p.id')
+            ->where('ip.status', 'hadir')
+            ->whereYear('i.tanggal_mulai', $tahun)
+            ->selectRaw("p.id as pegawai_id,
+                SUM((TIME_TO_SEC(TIMEDIFF(i.jam_selesai, i.jam_mulai)) / 3600) * (DATEDIFF(i.tanggal_selesai, i.tanggal_mulai) + 1)) as jam_iht,
+                COUNT(DISTINCT i.id) as kali_iht")
+            ->groupBy('p.id')
+            ->get()->keyBy('pegawai_id');
+
+        // Eksternal: 8 jam/hari
+        $eksternalPerPegawai = DB::table('hr_training_eksternal as te')
+            ->join('pegawai as p', 'te.pegawai_id', '=', 'p.id')
+            ->whereIn('te.status', ['tervalidasi', 'disetujui'])
+            ->whereYear('te.tanggal_mulai', $tahun)
+            ->selectRaw("p.id as pegawai_id,
+                SUM((DATEDIFF(te.tanggal_selesai, te.tanggal_mulai) + 1) * 8) as jam_eksternal,
+                COUNT(*) as kali_eksternal")
+            ->groupBy('p.id')
+            ->get()->keyBy('pegawai_id');
+
+        $rekap = Pegawai::aktif()
+            ->when($request->departemen, fn($q, $d) => $q->where('departemen', $d))
+            ->when($request->bidang,     fn($q, $b) => $q->where('bidang', $b))
+            ->when($nikBawahanAtasan,    fn($q)     => $q->whereIn('nik', $nikBawahanAtasan))
+            ->with('departemenRef')
+            ->orderBy('nama')
+            ->get()
+            ->map(function ($p) use ($ihtPerPegawai, $eksternalPerPegawai) {
+                $iht   = $ihtPerPegawai[$p->id]   ?? null;
+                $ekst  = $eksternalPerPegawai[$p->id] ?? null;
+                $jamIHT   = round((float) ($iht?->jam_iht ?? 0), 1);
+                $jamEkst  = round((float) ($ekst?->jam_eksternal ?? 0), 1);
+                return [
+                    'pegawai'       => $p,
+                    'jam_iht'       => $jamIHT,
+                    'kali_iht'      => (int) ($iht?->kali_iht ?? 0),
+                    'jam_eksternal' => $jamEkst,
+                    'kali_eksternal'=> (int) ($ekst?->kali_eksternal ?? 0),
+                    'jam_total'     => round($jamIHT + $jamEkst, 1),
+                ];
+            })
+            ->filter(fn($r) => $r['jam_total'] > 0 || request()->has('tampil_semua'))
+            ->sortByDesc('jam_total')
+            ->values();
+
+        $departemen = Departemen::orderBy('nama')->get(['dep_id', 'nama']);
+        $bidangList  = Pegawai::aktif()->whereNotNull('bidang')->distinct()->orderBy('bidang')->pluck('bidang');
+        $atasanList  = User::whereIn('role', ['atasan', 'hrd', 'admin'])
+            ->where('status', 'aktif')->orderBy('nama')->get(['id', 'nama', 'jabatan']);
+
+        return view('pelatihan.rekap', compact('rekap', 'tahun', 'departemen', 'bidangList', 'atasanList'));
+    }
+
     // ── Index ──────────────────────────────────────────────────────────────────
 
     public function index(Request $request)

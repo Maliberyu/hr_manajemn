@@ -71,6 +71,7 @@ Route::middleware(['auth'])->group(function () {
 
     // ── Ijin — semua role (karyawan submit, 2-level approval) ────────────────
     Route::prefix('ijin')->name('ijin.')->group(function () {
+        Route::get('/rekap',                      [IjinController::class, 'rekap'])->name('rekap');
         Route::get('/{jenis}',                    [IjinController::class, 'index'])->name('index');
         Route::get('/{jenis}/buat',               [IjinController::class, 'create'])->name('create');
         Route::post('/{jenis}',                   [IjinController::class, 'store'])->name('store');
@@ -87,6 +88,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/buat',                     [CutiController::class, 'create'])->name('create');
         Route::post('/',                        [CutiController::class, 'store'])->name('store');
         Route::get('/saldo',                    [CutiController::class, 'saldo'])->name('saldo');
+        Route::get('/rekap',                    [CutiController::class, 'rekap'])->name('rekap');
         Route::get('/{cuti}',                   [CutiController::class, 'show'])->name('show');
         Route::post('/{cuti}/approve-atasan',   [CutiController::class, 'approveAtasan'])->name('approve.atasan');
         Route::post('/{cuti}/tolak-atasan',     [CutiController::class, 'tolakAtasan'])->name('tolak.atasan');
@@ -254,6 +256,7 @@ Route::middleware(['auth', 'role:hrd,admin'])->group(function () {
 
     // ── Training IHT + Setting ─────────────────────────────────────────────────
     Route::prefix('training')->name('training.')->middleware('feature:training')->group(function () {
+        Route::get('/rekap',    [TrainingController::class, 'rekap'])->name('rekap');
         Route::get('/setting',  [TrainingController::class, 'setting'])->name('setting');
         Route::post('/setting', [TrainingController::class, 'settingUpdate'])->name('setting.update');
 

@@ -20,7 +20,7 @@ use Illuminate\Support\Facades\DB;
 
 class DashboardController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
         // Karyawan tidak punya akses dashboard HR — arahkan ke ESS
         if (auth()->user()->hasRole('karyawan')) {
@@ -117,10 +117,117 @@ class DashboardController extends Controller
             0
         );
 
+        // ─── Rekap SDM chart data (real-time) ────────────────────────────────────
+        $rekapDep   = $request->get('rekap_dep');
+        $bulanRekap = (int) ($request->get('rekap_bulan', now()->month));
+        $tahunRekap = (int) ($request->get('rekap_tahun', now()->year));
+
+        $departemen = $this->safe(
+            fn() => \App\Models\Departemen::orderBy('nama')->get(['dep_id', 'nama']),
+            collect()
+        );
+
+        $grafikRekapAbsensi = $this->safe(function () use ($bulanRekap, $tahunRekap, $rekapDep, $isAtasan, $nikBawahan) {
+            return DB::table('absensi as a')
+                ->join('pegawai as p', 'a.pegawai_id', '=', 'p.id')
+                ->join('departemen as d', 'p.departemen', '=', 'd.dep_id')
+                ->whereMonth('a.tanggal', $bulanRekap)
+                ->whereYear('a.tanggal', $tahunRekap)
+                ->when($rekapDep, fn($q) => $q->where('p.departemen', $rekapDep))
+                ->when($isAtasan && $nikBawahan, fn($q) => $q->whereIn('p.nik', $nikBawahan))
+                ->selectRaw("d.dep_id, d.nama as dep_nama,
+                    SUM(CASE WHEN a.status = 'hadir' THEN 1 ELSE 0 END) as hadir,
+                    SUM(CASE WHEN a.status = 'sakit' THEN 1 ELSE 0 END) as sakit,
+                    SUM(CASE WHEN a.status = 'alfa' THEN 1 ELSE 0 END) as alfa,
+                    SUM(CASE WHEN a.status = 'izin' THEN 1 ELSE 0 END) as izin,
+                    SUM(CASE WHEN a.terlambat_menit > 0 AND a.status = 'hadir' THEN 1 ELSE 0 END) as terlambat")
+                ->groupBy('d.dep_id', 'd.nama')
+                ->orderBy('d.nama')
+                ->get()
+                ->map(fn($r) => [
+                    'dep'       => $r->dep_nama,
+                    'hadir'     => (int) $r->hadir,
+                    'sakit'     => (int) $r->sakit,
+                    'alfa'      => (int) $r->alfa,
+                    'izin'      => (int) $r->izin,
+                    'terlambat' => (int) $r->terlambat,
+                ]);
+        }, collect());
+
+        $grafikRekapCuti = $this->safe(function () use ($tahunRekap, $rekapDep, $isAtasan, $nikBawahan) {
+            return PengajuanCuti::where('status', 'Disetujui')
+                ->whereYear('tanggal', $tahunRekap)
+                ->when($isAtasan && $nikBawahan, fn($q) => $q->whereIn('nik', $nikBawahan))
+                ->when($rekapDep, fn($q) => $q->whereHas('pegawai', fn($p) => $p->where('departemen', $rekapDep)))
+                ->selectRaw('urgensi, COUNT(*) as jumlah, SUM(jumlah) as total_hari')
+                ->groupBy('urgensi')
+                ->orderBy('urgensi')
+                ->get()
+                ->map(fn($r) => [
+                    'jenis'      => $r->urgensi,
+                    'jumlah'     => (int) $r->jumlah,
+                    'total_hari' => (int) $r->total_hari,
+                ]);
+        }, collect());
+
+        $grafikRekapIjin = $this->safe(function () use ($bulanRekap, $tahunRekap, $rekapDep, $isAtasan, $nikBawahan) {
+            return PengajuanIjin::where('status', 'Disetujui')
+                ->whereMonth('tanggal', $bulanRekap)
+                ->whereYear('tanggal', $tahunRekap)
+                ->when($isAtasan && $nikBawahan, fn($q) => $q->whereIn('nik', $nikBawahan))
+                ->when($rekapDep, fn($q) => $q->whereHas('pegawai', fn($p) => $p->where('departemen', $rekapDep)))
+                ->selectRaw('jenis, COUNT(*) as jumlah')
+                ->groupBy('jenis')
+                ->get()
+                ->map(fn($r) => [
+                    'jenis'  => PengajuanIjin::JENIS[$r->jenis] ?? $r->jenis,
+                    'key'    => $r->jenis,
+                    'jumlah' => (int) $r->jumlah,
+                ]);
+        }, collect());
+
+        $grafikRekapPelatihan = $this->safe(function () use ($tahunRekap, $rekapDep, $isAtasan, $nikBawahan) {
+            $ihtData = DB::table('hr_iht_peserta as ip')
+                ->join('hr_iht as i', 'ip.iht_id', '=', 'i.id')
+                ->join('pegawai as p', 'ip.pegawai_id', '=', 'p.id')
+                ->join('departemen as d', 'p.departemen', '=', 'd.dep_id')
+                ->where('ip.status', 'hadir')
+                ->whereYear('i.tanggal_mulai', $tahunRekap)
+                ->when($rekapDep, fn($q) => $q->where('p.departemen', $rekapDep))
+                ->when($isAtasan && $nikBawahan, fn($q) => $q->whereIn('p.nik', $nikBawahan))
+                ->selectRaw("d.dep_id, d.nama as dep_nama,
+                    SUM((TIME_TO_SEC(TIMEDIFF(i.jam_selesai, i.jam_mulai)) / 3600) * (DATEDIFF(i.tanggal_selesai, i.tanggal_mulai) + 1)) as jam_iht")
+                ->groupBy('d.dep_id', 'd.nama')
+                ->get()->keyBy('dep_id');
+
+            $eksternalData = DB::table('hr_training_eksternal as te')
+                ->join('pegawai as p', 'te.pegawai_id', '=', 'p.id')
+                ->join('departemen as d', 'p.departemen', '=', 'd.dep_id')
+                ->whereIn('te.status', ['tervalidasi', 'disetujui'])
+                ->whereYear('te.tanggal_mulai', $tahunRekap)
+                ->when($rekapDep, fn($q) => $q->where('p.departemen', $rekapDep))
+                ->when($isAtasan && $nikBawahan, fn($q) => $q->whereIn('p.nik', $nikBawahan))
+                ->selectRaw("d.dep_id, d.nama as dep_nama,
+                    SUM((DATEDIFF(te.tanggal_selesai, te.tanggal_mulai) + 1) * 8) as jam_eksternal")
+                ->groupBy('d.dep_id', 'd.nama')
+                ->get()->keyBy('dep_id');
+
+            $allDepIds = collect(array_keys($ihtData->toArray()))
+                ->merge(array_keys($eksternalData->toArray()))->unique();
+
+            return $allDepIds->map(fn($depId) => [
+                'dep'           => $ihtData[$depId]?->dep_nama ?? $eksternalData[$depId]?->dep_nama ?? $depId,
+                'jam_iht'       => round((float) ($ihtData[$depId]?->jam_iht ?? 0), 1),
+                'jam_eksternal' => round((float) ($eksternalData[$depId]?->jam_eksternal ?? 0), 1),
+            ])->sortBy('dep')->values();
+        }, collect());
+
         return view('dashboard', compact(
             'stats', 'absensiHariIni', 'cutiTerbaru',
             'lemburMenunggu', 'ultah', 'grafikAbsensi',
-            'pegawaiBelumAdaAtasan', 'isAtasan', 'nikBawahan'
+            'pegawaiBelumAdaAtasan', 'isAtasan', 'nikBawahan',
+            'grafikRekapAbsensi', 'grafikRekapCuti', 'grafikRekapIjin', 'grafikRekapPelatihan',
+            'departemen', 'rekapDep', 'bulanRekap', 'tahunRekap'
         ));
     }
 

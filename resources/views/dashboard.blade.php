@@ -276,6 +276,215 @@
 
 </div>
 
+{{-- ═══════════════════════════════════════════════════════════════ --}}
+{{-- SECTION: REKAP SDM --}}
+{{-- ═══════════════════════════════════════════════════════════════ --}}
+<div class="mt-8">
+
+    {{-- Section header + filter --}}
+    <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+        <div>
+            <h2 class="text-sm font-bold text-gray-800">Rekap SDM</h2>
+            <p class="text-xs text-gray-400">Statistik bulanan & tahunan berdasarkan data real-time</p>
+        </div>
+        <form method="GET" action="{{ route('dashboard') }}" class="flex flex-wrap items-center gap-2">
+            <select name="rekap_bulan"
+                    class="px-3 py-1.5 text-xs border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-400 focus:outline-none bg-white">
+                @foreach(range(1,12) as $b)
+                <option value="{{ $b }}" {{ $bulanRekap == $b ? 'selected' : '' }}>
+                    {{ \Carbon\Carbon::create(null,$b)->translatedFormat('M') }}
+                </option>
+                @endforeach
+            </select>
+            <select name="rekap_tahun"
+                    class="px-3 py-1.5 text-xs border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-400 focus:outline-none bg-white">
+                @foreach(range(now()->year-1, now()->year+1) as $t)
+                <option value="{{ $t }}" {{ $tahunRekap == $t ? 'selected' : '' }}>{{ $t }}</option>
+                @endforeach
+            </select>
+            <select name="rekap_dep"
+                    class="px-3 py-1.5 text-xs border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-400 focus:outline-none bg-white">
+                <option value="">Semua Departemen</option>
+                @foreach($departemen as $dep)
+                <option value="{{ $dep->dep_id }}" {{ $rekapDep == $dep->dep_id ? 'selected' : '' }}>
+                    {{ $dep->nama }}
+                </option>
+                @endforeach
+            </select>
+            <button type="submit"
+                    class="px-3 py-1.5 text-xs bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium">
+                Tampilkan
+            </button>
+            @if($rekapDep || request('rekap_bulan') || request('rekap_tahun'))
+            <a href="{{ route('dashboard') }}" class="text-xs text-gray-400 hover:text-gray-600">Reset</a>
+            @endif
+        </form>
+    </div>
+
+    {{-- KPI totals (computed from chart data) --}}
+    @php
+        $kpiHadir    = $grafikRekapAbsensi->sum('hadir');
+        $kpiSakit    = $grafikRekapAbsensi->sum('sakit');
+        $kpiAlfa     = $grafikRekapAbsensi->sum('alfa');
+        $kpiJamTrain = $grafikRekapPelatihan->sum(fn($d) => ($d['jam_iht'] ?? 0) + ($d['jam_eksternal'] ?? 0));
+        $kpiHariCuti = $grafikRekapCuti->sum('total_hari');
+        $kpiIjin     = $grafikRekapIjin->sum('jumlah');
+        $periodLabel = \Carbon\Carbon::create($tahunRekap, $bulanRekap)->translatedFormat('F Y');
+    @endphp
+
+    {{-- 2×2 chart grid --}}
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+
+        {{-- ── Card 1: Kehadiran per Departemen ─────────────────── --}}
+        <div class="bg-white rounded-2xl shadow-sm overflow-hidden" style="border:1px solid #e0e7ff; border-top:3px solid #3b82f6;">
+            <div class="px-5 pt-4 pb-3 flex items-start justify-between">
+                <div>
+                    <p class="text-[10px] font-semibold text-blue-500 uppercase tracking-widest">Kehadiran</p>
+                    <h3 class="text-sm font-bold text-gray-800 mt-0.5">Per Departemen</h3>
+                    <p class="text-xs text-gray-400 mt-0.5">{{ $periodLabel }}</p>
+                </div>
+                <div class="text-right">
+                    <p class="text-2xl font-extrabold text-gray-900 leading-none">{{ $kpiHadir ?: '—' }}</p>
+                    <p class="text-[10px] text-gray-400 mt-0.5">total hadir</p>
+                    <div class="flex items-center gap-1.5 mt-1.5 justify-end">
+                        <span class="text-[10px] text-amber-600 font-medium">{{ $kpiSakit }} sakit</span>
+                        <span class="text-gray-300">·</span>
+                        <span class="text-[10px] text-red-500 font-medium">{{ $kpiAlfa }} alfa</span>
+                    </div>
+                </div>
+            </div>
+            <div class="px-4 pb-2">
+                <div class="relative" style="height:168px">
+                    <canvas id="chartRekapAbsensi"></canvas>
+                </div>
+            </div>
+            <div class="px-5 py-3 border-t border-gray-50 flex items-center justify-between">
+                <div class="flex flex-wrap gap-x-3 gap-y-1">
+                    <span class="flex items-center gap-1 text-[10px] text-gray-500"><span class="w-2.5 h-2.5 rounded-sm bg-blue-500 inline-block"></span>Hadir</span>
+                    <span class="flex items-center gap-1 text-[10px] text-gray-500"><span class="w-2.5 h-2.5 rounded-sm bg-amber-400 inline-block"></span>Sakit</span>
+                    <span class="flex items-center gap-1 text-[10px] text-gray-500"><span class="w-2.5 h-2.5 rounded-sm bg-violet-400 inline-block"></span>Ijin</span>
+                    <span class="flex items-center gap-1 text-[10px] text-gray-500"><span class="w-2.5 h-2.5 rounded-sm bg-red-400 inline-block"></span>Alfa</span>
+                    <span class="flex items-center gap-1 text-[10px] text-gray-500"><span class="w-2.5 h-2.5 rounded-sm bg-orange-400 inline-block"></span>Terlambat</span>
+                </div>
+                @if(auth()->user()->hasRole(['hrd','admin']))
+                <a href="{{ route('absensi.rekap', ['bulan'=>$bulanRekap,'tahun'=>$tahunRekap]) }}"
+                   class="text-xs text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1 whitespace-nowrap">
+                    Selengkapnya
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/></svg>
+                </a>
+                @endif
+            </div>
+        </div>
+
+        {{-- ── Card 2: Jam Pelatihan per Departemen ──────────────── --}}
+        <div class="bg-white rounded-2xl shadow-sm overflow-hidden" style="border:1px solid #ede9fe; border-top:3px solid #6366f1;">
+            <div class="px-5 pt-4 pb-3 flex items-start justify-between">
+                <div>
+                    <p class="text-[10px] font-semibold text-indigo-500 uppercase tracking-widest">Pelatihan</p>
+                    <h3 class="text-sm font-bold text-gray-800 mt-0.5">Jam per Departemen</h3>
+                    <p class="text-xs text-gray-400 mt-0.5">Tahun {{ $tahunRekap }} · IHT + Eksternal</p>
+                </div>
+                <div class="text-right">
+                    <p class="text-2xl font-extrabold text-gray-900 leading-none">{{ $kpiJamTrain > 0 ? number_format($kpiJamTrain, 0) : '—' }}</p>
+                    <p class="text-[10px] text-gray-400 mt-0.5">total jam</p>
+                </div>
+            </div>
+            <div class="px-4 pb-2">
+                <div class="relative" style="height:168px">
+                    <canvas id="chartRekapPelatihan"></canvas>
+                </div>
+            </div>
+            <div class="px-5 py-3 border-t border-gray-50 flex items-center justify-between">
+                <div class="flex flex-wrap gap-x-3 gap-y-1">
+                    <span class="flex items-center gap-1 text-[10px] text-gray-500"><span class="w-2.5 h-2.5 rounded-sm bg-indigo-500 inline-block"></span>IHT</span>
+                    <span class="flex items-center gap-1 text-[10px] text-gray-500"><span class="w-2.5 h-2.5 rounded-sm bg-emerald-500 inline-block"></span>Eksternal</span>
+                    <span class="text-[10px] text-gray-400">(eksternal: asumsi 8j/hari)</span>
+                </div>
+                @if(auth()->user()->hasRole(['hrd','admin']))
+                <a href="{{ route('training.rekap', ['tahun'=>$tahunRekap]) }}"
+                   class="text-xs text-indigo-600 hover:text-indigo-800 font-medium flex items-center gap-1 whitespace-nowrap">
+                    Selengkapnya
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/></svg>
+                </a>
+                @endif
+            </div>
+        </div>
+
+        {{-- ── Card 3: Cuti per Jenis ─────────────────────────────── --}}
+        <div class="bg-white rounded-2xl shadow-sm overflow-hidden" style="border:1px solid #fef3c7; border-top:3px solid #f59e0b;">
+            <div class="px-5 pt-4 pb-3 flex items-start justify-between">
+                <div>
+                    <p class="text-[10px] font-semibold text-amber-500 uppercase tracking-widest">Cuti</p>
+                    <h3 class="text-sm font-bold text-gray-800 mt-0.5">Disetujui per Jenis</h3>
+                    <p class="text-xs text-gray-400 mt-0.5">Tahun {{ $tahunRekap }}</p>
+                </div>
+                <div class="text-right">
+                    <p class="text-2xl font-extrabold text-gray-900 leading-none">{{ $kpiHariCuti ?: '—' }}</p>
+                    <p class="text-[10px] text-gray-400 mt-0.5">total hari</p>
+                    <p class="text-[10px] text-amber-600 mt-1 font-medium">
+                        {{ $grafikRekapCuti->sum('jumlah') }} pengajuan
+                    </p>
+                </div>
+            </div>
+            <div class="px-4 pb-2">
+                <div class="relative" style="height:168px">
+                    <canvas id="chartRekapCuti"></canvas>
+                </div>
+            </div>
+            <div class="px-5 py-3 border-t border-gray-50 flex items-center justify-between">
+                <div class="flex flex-wrap gap-x-3 gap-y-1">
+                    @foreach(['#3b82f6','#10b981','#f59e0b','#ef4444','#8b5cf6','#f97316'] as $ci => $color)
+                    @if($ci < $grafikRekapCuti->count())
+                    <span class="flex items-center gap-1 text-[10px] text-gray-500">
+                        <span class="w-2.5 h-2.5 rounded-sm inline-block" style="background:{{ $color }}"></span>
+                        {{ $grafikRekapCuti[$ci]['jenis'] ?? '' }}
+                    </span>
+                    @endif
+                    @endforeach
+                </div>
+                <a href="{{ route('cuti.rekap', ['tahun'=>$tahunRekap]) }}"
+                   class="text-xs text-amber-600 hover:text-amber-800 font-medium flex items-center gap-1 whitespace-nowrap">
+                    Selengkapnya
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/></svg>
+                </a>
+            </div>
+        </div>
+
+        {{-- ── Card 4: Ijin per Jenis ─────────────────────────────── --}}
+        <div class="bg-white rounded-2xl shadow-sm overflow-hidden" style="border:1px solid #ffedd5; border-top:3px solid #f97316;">
+            <div class="px-5 pt-4 pb-3 flex items-start justify-between">
+                <div>
+                    <p class="text-[10px] font-semibold text-orange-500 uppercase tracking-widest">Ijin</p>
+                    <h3 class="text-sm font-bold text-gray-800 mt-0.5">Disetujui per Jenis</h3>
+                    <p class="text-xs text-gray-400 mt-0.5">{{ $periodLabel }}</p>
+                </div>
+                <div class="text-right">
+                    <p class="text-2xl font-extrabold text-gray-900 leading-none">{{ $kpiIjin ?: '—' }}</p>
+                    <p class="text-[10px] text-gray-400 mt-0.5">total pengajuan</p>
+                </div>
+            </div>
+            <div class="px-4 pb-2">
+                <div class="relative" style="height:168px">
+                    <canvas id="chartRekapIjin"></canvas>
+                </div>
+            </div>
+            <div class="px-5 py-3 border-t border-gray-50 flex items-center justify-between">
+                <div class="flex flex-wrap gap-x-3 gap-y-1">
+                    <span class="flex items-center gap-1 text-[10px] text-gray-500"><span class="w-2.5 h-2.5 rounded-sm bg-amber-400 inline-block"></span>Ijin Sakit</span>
+                    <span class="flex items-center gap-1 text-[10px] text-gray-500"><span class="w-2.5 h-2.5 rounded-sm bg-orange-400 inline-block"></span>Ijin Terlambat</span>
+                    <span class="flex items-center gap-1 text-[10px] text-gray-500"><span class="w-2.5 h-2.5 rounded-sm bg-violet-400 inline-block"></span>Pulang Duluan</span>
+                </div>
+                <a href="{{ route('ijin.rekap', ['bulan'=>$bulanRekap,'tahun'=>$tahunRekap]) }}"
+                   class="text-xs text-orange-600 hover:text-orange-800 font-medium flex items-center gap-1 whitespace-nowrap">
+                    Selengkapnya
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/></svg>
+                </a>
+            </div>
+        </div>
+
+    </div>
+</div>
+
 @endsection
 
 @push('scripts')
@@ -354,5 +563,176 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 });
+
+// ─── Rekap SDM charts (inside DOMContentLoaded so Chart.js is ready) ────────
+document.addEventListener('DOMContentLoaded', function () {
+
+const noDataPlugin = {
+    id: 'noData',
+    afterDraw(chart) {
+        const hasData = chart.data.datasets.some(ds => ds.data.some(v => v > 0));
+        if (!hasData) {
+            const { ctx, width, height } = chart;
+            ctx.save();
+            ctx.clearRect(0, 0, width, height);
+            ctx.fillStyle = '#f8fafc';
+            ctx.fillRect(0, 0, width, height);
+            ctx.strokeStyle = '#e2e8f0';
+            ctx.lineWidth = 1.5;
+            ctx.setLineDash([4, 4]);
+            const r = Math.min(width, height) * 0.35;
+            ctx.beginPath();
+            ctx.arc(width / 2, height / 2, r, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            ctx.font = '12px Inter, system-ui, sans-serif';
+            ctx.fillStyle = '#94a3b8';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('Belum ada data periode ini', width / 2, height / 2);
+            ctx.restore();
+        }
+    }
+};
+
+const tip = {
+    backgroundColor: '#1e293b',
+    titleColor: '#f1f5f9',
+    bodyColor: '#cbd5e1',
+    borderColor: '#334155',
+    borderWidth: 1,
+    padding: { x: 12, y: 8 },
+    cornerRadius: 8,
+    titleFont: { size: 11, weight: 'bold' },
+    bodyFont: { size: 11 },
+};
+
+// ─── Chart 1: Kehadiran per Departemen ───────────────────────────────────
+const ctxAbsensi = document.getElementById('chartRekapAbsensi');
+if (ctxAbsensi) {
+    const raw = @json($grafikRekapAbsensi);
+    new Chart(ctxAbsensi, {
+        type: 'bar',
+        plugins: [noDataPlugin],
+        data: {
+            labels: raw.length ? raw.map(d => d.dep) : ['—'],
+            datasets: [
+                { label: 'Hadir',     data: raw.map(d => d.hadir),     backgroundColor: '#3b82f6', borderRadius: 4, borderSkipped: false },
+                { label: 'Sakit',     data: raw.map(d => d.sakit),     backgroundColor: '#fbbf24', borderRadius: 4, borderSkipped: false },
+                { label: 'Ijin',      data: raw.map(d => d.izin),      backgroundColor: '#a78bfa', borderRadius: 4, borderSkipped: false },
+                { label: 'Alfa',      data: raw.map(d => d.alfa),      backgroundColor: '#f87171', borderRadius: 4, borderSkipped: false },
+                { label: 'Terlambat', data: raw.map(d => d.terlambat), backgroundColor: '#fb923c', borderRadius: 4, borderSkipped: false },
+            ]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { display: false }, tooltip: { ...tip, mode: 'index', intersect: false } },
+            scales: {
+                x: { grid: { display: false }, ticks: { font: { size: 10 }, color: '#94a3b8', maxRotation: 30 } },
+                y: { beginAtZero: true, grid: { color: '#f1f5f9' }, ticks: { font: { size: 10 }, color: '#94a3b8', stepSize: 1 } }
+            },
+            animation: { duration: 700, easing: 'easeOutQuart' }
+        }
+    });
+}
+
+// ─── Chart 2: Jam Pelatihan per Departemen ────────────────────────────────
+const ctxPelatihan = document.getElementById('chartRekapPelatihan');
+if (ctxPelatihan) {
+    const raw = @json($grafikRekapPelatihan);
+    new Chart(ctxPelatihan, {
+        type: 'bar',
+        plugins: [noDataPlugin],
+        data: {
+            labels: raw.length ? raw.map(d => d.dep) : ['—'],
+            datasets: [
+                { label: 'IHT',       data: raw.map(d => d.jam_iht),       backgroundColor: '#6366f1', stack: 'j', borderRadius: 4, borderSkipped: false },
+                { label: 'Eksternal', data: raw.map(d => d.jam_eksternal), backgroundColor: '#10b981', stack: 'j', borderRadius: 4, borderSkipped: false },
+            ]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: { ...tip, mode: 'index', intersect: false, callbacks: { label: c => ` ${c.dataset.label}: ${c.parsed.y.toFixed(1)} jam` } }
+            },
+            scales: {
+                x: { stacked: true, grid: { display: false }, ticks: { font: { size: 10 }, color: '#94a3b8', maxRotation: 30 } },
+                y: { stacked: true, beginAtZero: true, grid: { color: '#f1f5f9' }, ticks: { font: { size: 10 }, color: '#94a3b8', callback: v => v + 'j' } }
+            },
+            animation: { duration: 700, easing: 'easeOutQuart' }
+        }
+    });
+}
+
+// ─── Chart 3: Cuti per Jenis ──────────────────────────────────────────────
+const ctxCuti = document.getElementById('chartRekapCuti');
+if (ctxCuti) {
+    const raw = @json($grafikRekapCuti);
+    const palette = ['#3b82f6','#10b981','#f59e0b','#ef4444','#8b5cf6','#f97316'];
+    new Chart(ctxCuti, {
+        type: 'doughnut',
+        plugins: [noDataPlugin],
+        data: {
+            labels: raw.length ? raw.map(d => d.jenis) : ['—'],
+            datasets: [{
+                data: raw.length ? raw.map(d => d.total_hari) : [0],
+                backgroundColor: raw.length ? palette.slice(0, raw.length) : ['#e2e8f0'],
+                borderColor: '#fff',
+                borderWidth: 3,
+                hoverOffset: 8,
+            }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            cutout: '65%',
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    ...tip,
+                    callbacks: { label: c => ` ${c.label}: ${c.parsed} hari (${raw[c.dataIndex]?.jumlah ?? 0}x)` }
+                }
+            },
+            animation: { animateRotate: true, duration: 800, easing: 'easeOutQuart' }
+        }
+    });
+}
+
+// ─── Chart 4: Ijin per Jenis ──────────────────────────────────────────────
+const ctxIjin = document.getElementById('chartRekapIjin');
+if (ctxIjin) {
+    const raw = @json($grafikRekapIjin);
+    const colorMap = { sakit: '#fbbf24', terlambat: '#fb923c', pulang_duluan: '#a78bfa' };
+    new Chart(ctxIjin, {
+        type: 'bar',
+        plugins: [noDataPlugin],
+        data: {
+            labels: raw.length ? raw.map(d => d.jenis) : ['—'],
+            datasets: [{
+                label: 'Pengajuan',
+                data: raw.length ? raw.map(d => d.jumlah) : [0],
+                backgroundColor: raw.length ? raw.map(d => colorMap[d.key] ?? '#6366f1') : ['#e2e8f0'],
+                borderRadius: 8,
+                borderSkipped: false,
+                barThickness: 40,
+            }]
+        },
+        options: {
+            indexAxis: 'y',
+            responsive: true, maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: { ...tip, callbacks: { label: c => ` ${c.parsed.x} pengajuan` } }
+            },
+            scales: {
+                x: { beginAtZero: true, grid: { color: '#f1f5f9' }, ticks: { font: { size: 11 }, color: '#94a3b8', stepSize: 1 } },
+                y: { grid: { display: false }, ticks: { font: { size: 11 }, color: '#374151' } }
+            },
+            animation: { duration: 700, easing: 'easeOutQuart' }
+        }
+    });
+}
+
+}); // end DOMContentLoaded rekap charts
 </script>
 @endpush

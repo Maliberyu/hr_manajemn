@@ -8,6 +8,9 @@ use App\Models\LokasiAbsensi;
 use App\Models\Pegawai;
 use App\Models\RekapAbsensi;
 use App\Models\JadwalPegawai;
+use App\Models\Departemen;
+use App\Models\AtasanPegawai;
+use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Maatwebsite\Excel\Facades\Excel;
@@ -296,17 +299,30 @@ class AbsensiController extends Controller
 
     public function rekap(Request $request)
     {
-        $bulan = $request->bulan ?? now()->month;
-        $tahun = $request->tahun ?? now()->year;
+        $bulan = (int) ($request->bulan ?? now()->month);
+        $tahun = (int) ($request->tahun ?? now()->year);
+
+        $nikBawahanAtasan = $request->atasan_id
+            ? AtasanPegawai::nikBawahan((int) $request->atasan_id)
+            : null;
 
         $rekap = RekapAbsensi::with('pegawai.departemenRef')
             ->periode($tahun, $bulan)
             ->when($request->departemen, fn($q, $d) =>
                 $q->whereHas('pegawai', fn($p) => $p->where('departemen', $d)))
+            ->when($request->bidang, fn($q, $b) =>
+                $q->whereHas('pegawai', fn($p) => $p->where('bidang', $b)))
+            ->when($nikBawahanAtasan, fn($q) =>
+                $q->whereHas('pegawai', fn($p) => $p->whereIn('nik', $nikBawahanAtasan)))
             ->orderByDesc('total_terlambat')
             ->paginate(30)->withQueryString();
 
-        return view('absensi.rekap', compact('rekap', 'bulan', 'tahun'));
+        $departemen = Departemen::orderBy('nama')->get(['dep_id', 'nama']);
+        $bidangList  = Pegawai::aktif()->whereNotNull('bidang')->distinct()->orderBy('bidang')->pluck('bidang');
+        $atasanList  = User::whereIn('role', ['atasan', 'hrd', 'admin'])
+            ->where('status', 'aktif')->orderBy('nama')->get(['id', 'nama', 'jabatan']);
+
+        return view('absensi.rekap', compact('rekap', 'bulan', 'tahun', 'departemen', 'bidangList', 'atasanList'));
     }
 
     // ─── Generate rekap (jalankan tiap akhir bulan / via scheduler) ──────────

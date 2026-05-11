@@ -1,24 +1,14 @@
 @extends('layouts.app')
-@section('title', 'Rekap Lembur')
-@section('page-title', 'Rekap Lembur Bulanan')
-@section('page-subtitle', 'Ringkasan lembur yang sudah disetujui')
+@section('title', 'Rekap Cuti')
+@section('page-title', 'Rekap Cuti Tahunan')
+@section('page-subtitle', 'Rekapitulasi cuti per karyawan berdasarkan jenis')
 
 @section('content')
 <div class="space-y-4">
 
     {{-- Filter --}}
-    <form method="GET" action="{{ route('lembur.rekap') }}"
+    <form method="GET" action="{{ route('cuti.rekap') }}"
           class="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex flex-wrap gap-3 items-end">
-        <div>
-            <label class="block text-xs text-gray-500 mb-1">Bulan</label>
-            <select name="bulan" class="px-3 py-2 text-sm border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-400 focus:outline-none">
-                @foreach(range(1,12) as $b)
-                <option value="{{ $b }}" {{ $bulan == $b ? 'selected' : '' }}>
-                    {{ \Carbon\Carbon::create(null,$b)->translatedFormat('F') }}
-                </option>
-                @endforeach
-            </select>
-        </div>
         <div>
             <label class="block text-xs text-gray-500 mb-1">Tahun</label>
             <select name="tahun" class="px-3 py-2 text-sm border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-400 focus:outline-none">
@@ -31,7 +21,7 @@
             <label class="block text-xs text-gray-500 mb-1">Departemen</label>
             <select name="departemen" class="px-3 py-2 text-sm border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-400 focus:outline-none">
                 <option value="">Semua</option>
-                @foreach($departemenList as $dep)
+                @foreach($departemen as $dep)
                 <option value="{{ $dep->dep_id }}" {{ request('departemen') == $dep->dep_id ? 'selected' : '' }}>
                     {{ $dep->nama }}
                 </option>
@@ -58,27 +48,34 @@
                 @endforeach
             </select>
         </div>
+        <div class="flex items-end gap-2">
+            <label class="flex items-center gap-2 text-sm text-gray-600 cursor-pointer pb-2">
+                <input type="checkbox" name="tampil_semua" value="1"
+                       {{ request('tampil_semua') ? 'checked' : '' }}
+                       class="rounded border-gray-300 text-blue-600">
+                Tampilkan semua (termasuk 0 hari)
+            </label>
+        </div>
         <button type="submit"
                 class="px-4 py-2 text-sm bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition font-medium">
             Tampilkan
         </button>
-        @if(request()->hasAny(['departemen','bidang','atasan_id']))
-        <a href="{{ route('lembur.rekap', ['bulan'=>$bulan,'tahun'=>$tahun]) }}"
+        @if(request()->hasAny(['departemen','bidang','atasan_id','tampil_semua']))
+        <a href="{{ route('cuti.rekap', ['tahun'=>$tahun]) }}"
            class="px-4 py-2 text-sm text-gray-500 border border-gray-200 rounded-xl hover:bg-gray-50 transition">
-            Reset Filter
+            Reset
         </a>
         @endif
     </form>
 
+    {{-- Tabel --}}
     <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
         <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
             <div>
-                <p class="font-semibold text-gray-800">
-                    Rekap Lembur — {{ \Carbon\Carbon::create($tahun, $bulan)->translatedFormat('F Y') }}
-                </p>
+                <p class="font-semibold text-gray-800">Rekap Cuti — Tahun {{ $tahun }}</p>
                 <p class="text-xs text-gray-400 mt-0.5">Hanya pengajuan berstatus Disetujui</p>
             </div>
-            <span class="text-sm text-gray-500">{{ $rekap->total() }} pegawai</span>
+            <span class="text-sm text-gray-500">{{ $rekap->count() }} karyawan</span>
         </div>
 
         <div class="overflow-x-auto">
@@ -86,22 +83,23 @@
                 <thead class="bg-gray-50 border-b border-gray-100">
                     <tr>
                         <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600">#</th>
-                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600">Pegawai</th>
-                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600">Departemen</th>
-                        <th class="px-4 py-3 text-center text-xs font-semibold text-gray-600">Pengajuan</th>
-                        <th class="px-4 py-3 text-center text-xs font-semibold text-gray-600">Total Jam</th>
-                        <th class="px-4 py-3 text-right text-xs font-semibold text-gray-600">Total Nominal</th>
+                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600">Karyawan</th>
+                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600">Dept / Bidang</th>
+                        @foreach($jenisList as $jenis)
+                        <th class="px-3 py-3 text-center text-xs font-semibold text-gray-600 whitespace-nowrap">{{ $jenis }}</th>
+                        @endforeach
+                        <th class="px-4 py-3 text-center text-xs font-semibold text-gray-600">Total Hari</th>
+                        <th class="px-4 py-3 text-center text-xs font-semibold text-gray-600">Sisa Tahunan</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-50">
-                    @forelse($rekap as $i => $p)
+                    @forelse($rekap as $i => $r)
+                    @php $p = $r['pegawai']; @endphp
                     <tr class="hover:bg-gray-50/50">
-                        <td class="px-4 py-3 text-gray-400 text-xs">
-                            {{ $rekap->firstItem() + $i }}
-                        </td>
+                        <td class="px-4 py-3 text-gray-400 text-xs">{{ $i + 1 }}</td>
                         <td class="px-4 py-3">
                             <div class="font-medium text-gray-800">{{ $p->nama }}</div>
-                            <div class="text-xs text-gray-400">{{ $p->jbtn }}</div>
+                            <div class="text-xs text-gray-400">{{ $p->nik }} · {{ $p->jbtn }}</div>
                         </td>
                         <td class="px-4 py-3 text-xs text-gray-500">
                             <div>{{ $p->departemenRef?->nama ?? $p->departemen ?? '-' }}</div>
@@ -109,26 +107,30 @@
                             <div class="text-gray-400">{{ $p->bidang }}</div>
                             @endif
                         </td>
-                        <td class="px-4 py-3 text-center">
-                            <span class="text-gray-700 font-medium">{{ $p->total_pengajuan ?? 0 }}x</span>
+                        @foreach($jenisList as $jenis)
+                        @php $row = $r['rows'][$jenis] ?? null; @endphp
+                        <td class="px-3 py-3 text-center text-xs">
+                            @if($row && $row->hari > 0)
+                            <span class="font-medium text-blue-700">{{ $row->hari }}h</span>
+                            <span class="text-gray-400">({{ $row->kali }}x)</span>
+                            @else
+                            <span class="text-gray-300">—</span>
+                            @endif
                         </td>
+                        @endforeach
+                        <td class="px-4 py-3 text-center font-semibold text-gray-800">{{ $r['total_hari'] }}</td>
                         <td class="px-4 py-3 text-center">
-                            @php
-                                $jam = (int) ($p->total_jam ?? 0);
-                                $mnt = (int)((($p->total_jam ?? 0) - $jam) * 60);
-                            @endphp
-                            <span class="font-semibold text-blue-600">
-                                {{ $jam }}j{{ $mnt > 0 ? ' '.$mnt.'m' : '' }}
+                            @php $sisa = $r['sisa_tahunan']; @endphp
+                            <span class="text-xs font-semibold px-2 py-0.5 rounded-full
+                                {{ $sisa >= 8 ? 'bg-green-100 text-green-700' : ($sisa >= 4 ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700') }}">
+                                {{ $sisa }} hari
                             </span>
-                        </td>
-                        <td class="px-4 py-3 text-right font-semibold text-gray-800">
-                            Rp {{ number_format($p->total_nominal ?? 0, 0, ',', '.') }}
                         </td>
                     </tr>
                     @empty
                     <tr>
-                        <td colspan="6" class="px-6 py-10 text-center text-sm text-gray-400">
-                            Tidak ada data lembur yang disetujui pada bulan ini.
+                        <td colspan="{{ 5 + count($jenisList) }}" class="px-6 py-10 text-center text-sm text-gray-400">
+                            Tidak ada data cuti untuk periode ini.
                         </td>
                     </tr>
                     @endforelse
@@ -136,31 +138,21 @@
                 @if($rekap->count() > 0)
                 <tfoot class="border-t-2 border-gray-200 bg-gray-50">
                     <tr>
-                        <td colspan="4" class="px-4 py-3 text-xs font-semibold text-gray-600 text-right">
-                            Total
+                        <td colspan="3" class="px-4 py-3 text-xs font-semibold text-gray-600 text-right">Total</td>
+                        @foreach($jenisList as $jenis)
+                        <td class="px-3 py-3 text-center text-xs font-bold text-blue-700">
+                            {{ $rekap->sum(fn($r) => $r['rows'][$jenis]?->hari ?? 0) }}h
                         </td>
-                        <td class="px-4 py-3 text-center font-bold text-blue-700">
-                            @php
-                                $totalJam = $rekap->sum('total_jam');
-                                $tj  = (int) $totalJam;
-                                $tm  = (int)(($totalJam - $tj) * 60);
-                            @endphp
-                            {{ $tj }}j{{ $tm > 0 ? ' '.$tm.'m' : '' }}
+                        @endforeach
+                        <td class="px-4 py-3 text-center font-bold text-gray-800">
+                            {{ $rekap->sum('total_hari') }}
                         </td>
-                        <td class="px-4 py-3 text-right font-bold text-gray-800">
-                            Rp {{ number_format($rekap->sum('total_nominal'), 0, ',', '.') }}
-                        </td>
+                        <td></td>
                     </tr>
                 </tfoot>
                 @endif
             </table>
         </div>
-
-        @if($rekap->hasPages())
-        <div class="px-4 py-3 border-t border-gray-100">
-            {{ $rekap->links() }}
-        </div>
-        @endif
     </div>
 </div>
 @endsection

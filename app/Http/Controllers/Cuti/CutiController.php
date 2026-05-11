@@ -5,6 +5,9 @@ namespace App\Http\Controllers\Cuti;
 use App\Http\Controllers\Controller;
 use App\Models\PengajuanCuti;
 use App\Models\Pegawai;
+use App\Models\Departemen;
+use App\Models\AtasanPegawai;
+use App\Models\User;
 use App\Models\HrNotification;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -230,6 +233,53 @@ class CutiController extends Controller
                   ->setPaper('a4', 'portrait');
 
         return $pdf->download("Surat_Cuti_{$cuti->no_pengajuan}.pdf");
+    }
+
+    // ─── Rekap cuti per pegawai ───────────────────────────────────────────────
+
+    public function rekap(Request $request)
+    {
+        $tahun = (int) ($request->tahun ?? now()->year);
+
+        $nikBawahanAtasan = $request->atasan_id
+            ? AtasanPegawai::nikBawahan((int) $request->atasan_id)
+            : null;
+
+        $rekap = Pegawai::aktif()
+            ->when($request->departemen, fn($q, $d) => $q->where('departemen', $d))
+            ->when($request->bidang,     fn($q, $b) => $q->where('bidang', $b))
+            ->when($nikBawahanAtasan,    fn($q)     => $q->whereIn('nik', $nikBawahanAtasan))
+            ->orderBy('nama')
+            ->get()
+            ->map(function ($p) use ($tahun) {
+                $rows = PengajuanCuti::where('nik', $p->nik)
+                    ->where('status', 'Disetujui')
+                    ->whereYear('tanggal', $tahun)
+                    ->selectRaw('urgensi, COUNT(*) as kali, SUM(jumlah) as hari')
+                    ->groupBy('urgensi')
+                    ->get()
+                    ->keyBy('urgensi');
+
+                $tahunan = (int) ($rows['Tahunan']?->hari ?? 0);
+                $sakit   = (int) ($rows['Sakit']?->hari ?? 0);
+                $total   = $rows->sum('hari');
+
+                return [
+                    'pegawai'     => $p,
+                    'rows'        => $rows,
+                    'total_hari'  => $total,
+                    'sisa_tahunan'=> max(0, PengajuanCuti::HAK_CUTI_TAHUNAN - $tahunan),
+                ];
+            })
+            ->filter(fn($r) => $r['total_hari'] > 0 || request()->has('tampil_semua'));
+
+        $departemen = Departemen::orderBy('nama')->get(['dep_id', 'nama']);
+        $bidangList  = Pegawai::aktif()->whereNotNull('bidang')->distinct()->orderBy('bidang')->pluck('bidang');
+        $atasanList  = User::whereIn('role', ['atasan', 'hrd', 'admin'])
+            ->where('status', 'aktif')->orderBy('nama')->get(['id', 'nama', 'jabatan']);
+        $jenisList   = PengajuanCuti::JENIS_CUTI ?? [];
+
+        return view('cuti.rekap', compact('rekap', 'tahun', 'departemen', 'bidangList', 'atasanList', 'jenisList'));
     }
 
     // ─── Saldo cuti per pegawai ───────────────────────────────────────────────

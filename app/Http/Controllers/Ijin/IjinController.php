@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\PengajuanIjin;
 use App\Models\Pegawai;
 use App\Models\AtasanPegawai;
+use App\Models\Departemen;
+use App\Models\User;
 use App\Models\HrNotification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -15,6 +17,47 @@ class IjinController extends Controller
     private function validasiJenis(string $jenis): void
     {
         abort_unless(array_key_exists($jenis, PengajuanIjin::JENIS), 404);
+    }
+
+    // ─── Rekap semua jenis ijin ────────────────────────────────────────────────
+
+    public function rekap(Request $request)
+    {
+        $bulan = (int) ($request->bulan ?? now()->month);
+        $tahun = (int) ($request->tahun ?? now()->year);
+
+        $nikBawahanAtasan = $request->atasan_id
+            ? AtasanPegawai::nikBawahan((int) $request->atasan_id)
+            : null;
+
+        $rekap = Pegawai::aktif()
+            ->when($request->departemen, fn($q, $d) => $q->where('departemen', $d))
+            ->when($request->bidang,     fn($q, $b) => $q->where('bidang', $b))
+            ->when($nikBawahanAtasan,    fn($q)     => $q->whereIn('nik', $nikBawahanAtasan))
+            ->orderBy('nama')
+            ->get()
+            ->map(function ($p) use ($bulan, $tahun) {
+                $rows = PengajuanIjin::where('nik', $p->nik)
+                    ->where('status', 'Disetujui')
+                    ->whereMonth('tanggal', $bulan)
+                    ->whereYear('tanggal', $tahun)
+                    ->selectRaw('jenis, COUNT(*) as kali, SUM(durasi_menit) as total_menit')
+                    ->groupBy('jenis')
+                    ->get()
+                    ->keyBy('jenis');
+
+                $total = $rows->sum('kali');
+                return ['pegawai' => $p, 'rows' => $rows, 'total' => $total];
+            })
+            ->filter(fn($r) => $r['total'] > 0 || request()->has('tampil_semua'));
+
+        $departemen = Departemen::orderBy('nama')->get(['dep_id', 'nama']);
+        $bidangList  = Pegawai::aktif()->whereNotNull('bidang')->distinct()->orderBy('bidang')->pluck('bidang');
+        $atasanList  = User::whereIn('role', ['atasan', 'hrd', 'admin'])
+            ->where('status', 'aktif')->orderBy('nama')->get(['id', 'nama', 'jabatan']);
+        $jenisList   = PengajuanIjin::JENIS;
+
+        return view('ijin.rekap', compact('rekap', 'bulan', 'tahun', 'departemen', 'bidangList', 'atasanList', 'jenisList'));
     }
 
     // ─── Index ─────────────────────────────────────────────────────────────────
