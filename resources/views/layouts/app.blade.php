@@ -429,6 +429,14 @@
         </div>
     </div>
 
+    {{-- Portal Karyawan (HRD/Admin yang punya link pegawai) --}}
+    @if(auth()->user()->pegawai)
+    <div class="pt-3 mt-3 border-t border-blue-800">
+        <p x-show="sidebarOpen" class="px-3 mb-1 text-[10px] uppercase tracking-wider text-blue-400">Portal Saya</p>
+        {!! navLink('Portal Karyawan', 'ess.dashboard', 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z') !!}
+    </div>
+    @endif
+
     {{-- Pengaturan: Atasan (HRD & Admin) --}}
     @php
         $atasanBelumSet = \App\Models\Pegawai::aktif()->whereDoesntHave('atasanRecord')->count();

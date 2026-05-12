@@ -6,7 +6,8 @@
     "keywords": ["laravel", "framework"],
     "license": "MIT",
     "require": {
-        "php": "^8.3",
+        "php": "^8.2",
+        "barryvdh/laravel-dompdf": "^3.1",
         "intervention/image": "3.6",
         "laravel/breeze": "^2.4",
         "laravel/framework": "^13.0",
@@ -52,7 +53,8 @@
         ],
         "post-autoload-dump": [
             "Illuminate\\Foundation\\ComposerScripts::postAutoloadDump",
-            "@php artisan package:discover --ansi"
+            "@php artisan package:discover --ansi",
+            "@php -r \"$f='vendor/composer/platform_check.php'; if(file_exists($f)){$c=file_get_contents($f);$c=preg_replace('/PHP_VERSION_ID >= 80[3-9]\\d\\d/','PHP_VERSION_ID >= 80200',$c);file_put_contents($f,$c);}\""
         ],
         "post-update-cmd": [
             "@php artisan vendor:publish --tag=laravel-assets --ansi --force"
@@ -81,6 +83,9 @@
         "allow-plugins": {
             "pestphp/pest-plugin": true,
             "php-http/discovery": true
+        },
+        "platform": {
+            "php": "8.2.12"
         }
     },
     "minimum-stability": "stable",

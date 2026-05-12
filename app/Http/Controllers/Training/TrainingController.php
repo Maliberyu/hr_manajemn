@@ -232,6 +232,26 @@ class TrainingController extends Controller
         return back()->with('success', 'Peserta dihapus.');
     }
 
+    // ── Preview Sertifikat (GET — tampil inline di browser) ──────────────────
+
+    public function previewSertifikat(IHT $iht, IHTPeserta $peserta)
+    {
+        abort_unless(in_array($peserta->status, ['hadir', 'selesai']), 403, 'Peserta belum hadir.');
+
+        $peserta->load('pegawai.departemenRef');
+        $iht->load('peserta');
+
+        $nomor = $peserta->nomor_sertifikat ?? IHT::generateNomorSertifikat() . ' (Preview)';
+        $logo  = TrainingSetting::logoUrl();
+
+        $pdf = Pdf::loadView('training.iht.sertifikat-pdf', compact('iht', 'peserta', 'nomor', 'logo'))
+                  ->setPaper('a4', 'landscape');
+
+        return response($pdf->output(), 200)
+            ->header('Content-Type', 'application/pdf')
+            ->header('Content-Disposition', 'inline; filename="preview_sertifikat.pdf"');
+    }
+
     // ── Generate Sertifikat ───────────────────────────────────────────────────
 
     public function generateSertifikat(IHT $iht, IHTPeserta $peserta)

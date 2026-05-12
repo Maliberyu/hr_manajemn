@@ -164,19 +164,28 @@
                     </td>
                     <td class="px-4 py-3 text-center">
                         <div class="flex items-center justify-center gap-1.5">
+                            @if(in_array($p->status, ['hadir','selesai']))
+                            {{-- Preview (selalu tampil jika hadir/selesai) --}}
+                            <a href="{{ route('training.iht.peserta.sertifikat.preview', [$iht, $p]) }}"
+                               target="_blank"
+                               class="px-2.5 py-1 text-xs bg-slate-100 text-slate-600 hover:bg-slate-200 rounded-lg transition">
+                                Preview
+                            </a>
+                            @endif
                             @if(!$p->sudahSertifikat() && in_array($p->status, ['hadir','selesai']))
                             <form method="POST" action="{{ route('training.iht.peserta.sertifikat.generate', [$iht, $p]) }}"
-                                  onsubmit="return confirm('Generate sertifikat untuk {{ $p->pegawai?->nama }}?')">
+                                  onsubmit="return confirm('Generate & simpan sertifikat untuk {{ $p->pegawai?->nama }}?')">
                                 @csrf
                                 <button type="submit"
                                         class="px-2.5 py-1 text-xs bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
-                                    Generate Sertifikat
+                                    Generate
                                 </button>
                             </form>
                             @endif
                             @if($p->sudahSertifikat())
                             <a href="{{ route('training.iht.peserta.sertifikat.download', [$iht, $p]) }}"
-                               class="px-2.5 py-1 text-xs bg-green-50 text-green-600 hover:bg-green-100 rounded-lg">
+                               class="px-2.5 py-1 text-xs bg-green-50 text-green-600 hover:bg-green-100 rounded-lg border border-green-200 transition">
+                                <svg class="w-3 h-3 inline-block mr-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
                                 Download
                             </a>
                             @endif

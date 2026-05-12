@@ -272,8 +272,9 @@ Route::middleware(['auth', 'role:hrd,admin'])->group(function () {
             Route::post('/{iht}/peserta',                            [TrainingController::class, 'storePeserta'])->name('peserta.store');
             Route::put('/{iht}/peserta/{peserta}/status',            [TrainingController::class, 'updateStatusPeserta'])->name('peserta.status');
             Route::delete('/{iht}/peserta/{peserta}',                [TrainingController::class, 'destroyPeserta'])->name('peserta.destroy');
-            Route::post('/{iht}/peserta/{peserta}/sertifikat',       [TrainingController::class, 'generateSertifikat'])->name('peserta.sertifikat.generate');
-            Route::get('/{iht}/peserta/{peserta}/sertifikat/download',[TrainingController::class, 'downloadSertifikat'])->name('peserta.sertifikat.download');
+            Route::get( '/{iht}/peserta/{peserta}/sertifikat',         [TrainingController::class, 'previewSertifikat'])->name('peserta.sertifikat.preview');
+            Route::post('/{iht}/peserta/{peserta}/sertifikat',        [TrainingController::class, 'generateSertifikat'])->name('peserta.sertifikat.generate');
+            Route::get( '/{iht}/peserta/{peserta}/sertifikat/download',[TrainingController::class, 'downloadSertifikat'])->name('peserta.sertifikat.download');
         });
     });
 });

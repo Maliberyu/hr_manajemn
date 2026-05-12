@@ -13,6 +13,7 @@ use App\Models\AtasanPegawai;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Facades\Excel;
 
 class AbsensiController extends Controller
@@ -299,30 +300,80 @@ class AbsensiController extends Controller
 
     public function rekap(Request $request)
     {
-        $bulan = (int) ($request->bulan ?? now()->month);
-        $tahun = (int) ($request->tahun ?? now()->year);
+        // Mode filter: per-bulan (default) atau per-tanggal (custom range)
+        $modeRange = $request->filled('tgl_mulai') && $request->filled('tgl_akhir');
+
+        if ($modeRange) {
+            $tglMulai = Carbon::parse($request->tgl_mulai)->startOfDay();
+            $tglAkhir = Carbon::parse($request->tgl_akhir)->endOfDay();
+        } else {
+            $bulan    = (int) ($request->bulan ?? now()->month);
+            $tahun    = (int) ($request->tahun ?? now()->year);
+            $tglMulai = Carbon::create($tahun, $bulan, 1)->startOfDay();
+            $tglAkhir = Carbon::create($tahun, $bulan, 1)->endOfMonth()->endOfDay();
+        }
 
         $nikBawahanAtasan = $request->atasan_id
             ? AtasanPegawai::nikBawahan((int) $request->atasan_id)
             : null;
 
-        $rekap = RekapAbsensi::with('pegawai.departemenRef')
-            ->periode($tahun, $bulan)
-            ->when($request->departemen, fn($q, $d) =>
-                $q->whereHas('pegawai', fn($p) => $p->where('departemen', $d)))
-            ->when($request->bidang, fn($q, $b) =>
-                $q->whereHas('pegawai', fn($p) => $p->where('bidang', $b)))
-            ->when($nikBawahanAtasan, fn($q) =>
-                $q->whereHas('pegawai', fn($p) => $p->whereIn('nik', $nikBawahanAtasan)))
-            ->orderByDesc('total_terlambat')
-            ->paginate(30)->withQueryString();
+        // Query real-time dari tabel absensi langsung
+        $query = DB::table('absensi as a')
+            ->join('pegawai as p', 'a.pegawai_id', '=', 'p.id')
+            ->leftJoin('departemen as d', 'p.departemen', '=', 'd.dep_id')
+            ->whereBetween('a.tanggal', [$tglMulai->toDateString(), $tglAkhir->toDateString()])
+            ->when($request->departemen, fn($q) => $q->where('p.departemen', $request->departemen))
+            ->when($request->bidang,     fn($q) => $q->where('p.bidang', $request->bidang))
+            ->when($nikBawahanAtasan,    fn($q) => $q->whereIn('p.nik', $nikBawahanAtasan))
+            ->selectRaw("
+                a.pegawai_id,
+                p.nik,
+                p.nama,
+                p.jbtn,
+                p.departemen as dep_id,
+                COALESCE(d.nama, p.departemen, '-') as dep_nama,
+                p.bidang,
+                SUM(CASE WHEN a.status = 'hadir' THEN 1 ELSE 0 END) as total_hadir,
+                SUM(CASE WHEN a.status = 'sakit' THEN 1 ELSE 0 END) as total_sakit,
+                SUM(CASE WHEN a.status = 'izin'  THEN 1 ELSE 0 END) as total_izin,
+                SUM(CASE WHEN a.status = 'alfa'  THEN 1 ELSE 0 END) as total_alfa,
+                SUM(CASE WHEN a.status = 'cuti'  THEN 1 ELSE 0 END) as total_cuti,
+                SUM(CASE WHEN a.terlambat_menit > 0 AND a.status = 'hadir' THEN 1 ELSE 0 END) as total_terlambat,
+                COALESCE(SUM(a.terlambat_menit), 0) as total_menit_terlambat,
+                COUNT(*) as total_hari_tercatat
+            ")
+            ->groupBy('a.pegawai_id', 'p.nik', 'p.nama', 'p.jbtn', 'p.departemen', 'd.nama', 'p.bidang')
+            ->orderBy('p.nama');
+
+        $rekap = $query->paginate(30)->withQueryString();
+
+        // Totals untuk footer
+        $totals = $query->cloneWithout(['groups', 'columns', 'orders', 'limit', 'offset'])
+                        ->selectRaw("
+                            SUM(CASE WHEN a.status = 'hadir' THEN 1 ELSE 0 END) as hadir,
+                            SUM(CASE WHEN a.status = 'sakit' THEN 1 ELSE 0 END) as sakit,
+                            SUM(CASE WHEN a.status = 'izin'  THEN 1 ELSE 0 END) as izin,
+                            SUM(CASE WHEN a.status = 'alfa'  THEN 1 ELSE 0 END) as alfa,
+                            SUM(CASE WHEN a.status = 'cuti'  THEN 1 ELSE 0 END) as cuti,
+                            SUM(CASE WHEN a.terlambat_menit > 0 THEN 1 ELSE 0 END) as terlambat,
+                            COALESCE(SUM(a.terlambat_menit), 0) as menit_terlambat
+                        ")->first();
 
         $departemen = Departemen::orderBy('nama')->get(['dep_id', 'nama']);
         $bidangList  = Pegawai::aktif()->whereNotNull('bidang')->distinct()->orderBy('bidang')->pluck('bidang');
         $atasanList  = User::whereIn('role', ['atasan', 'hrd', 'admin'])
             ->where('status', 'aktif')->orderBy('nama')->get(['id', 'nama', 'jabatan']);
 
-        return view('absensi.rekap', compact('rekap', 'bulan', 'tahun', 'departemen', 'bidangList', 'atasanList'));
+        $bulan    = $bulan    ?? $tglMulai->month;
+        $tahun    = $tahun    ?? $tglMulai->year;
+        $tglMulai = $tglMulai->toDateString();
+        $tglAkhir = $tglAkhir->toDateString();
+
+        return view('absensi.rekap', compact(
+            'rekap', 'totals', 'bulan', 'tahun',
+            'tglMulai', 'tglAkhir', 'modeRange',
+            'departemen', 'bidangList', 'atasanList'
+        ));
     }
 
     // ─── Generate rekap (jalankan tiap akhir bulan / via scheduler) ──────────
