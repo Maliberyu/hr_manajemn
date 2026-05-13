@@ -1,30 +1,60 @@
 @extends('layouts.app')
-@section('title', 'Absensi Harian')
+@section('title', 'Absensi')
 @section('page-title', 'Absensi')
-@section('page-subtitle', 'Data kehadiran — ' . $tanggal->translatedFormat('l, d F Y'))
+@section('page-subtitle', $isRange
+    ? $tglMulai->translatedFormat('d M Y') . ' — ' . $tglAkhir->translatedFormat('d M Y')
+    : 'Data kehadiran — ' . $tglMulai->translatedFormat('l, d F Y'))
 
 @section('content')
 
 {{-- Filter ──────────────────────────────────────────────────────────────── --}}
-<form method="GET" class="flex flex-wrap gap-2 mb-5">
-    <input type="date" name="tanggal" value="{{ $tanggal->format('Y-m-d') }}"
-           class="px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400">
+<form method="GET" action="{{ route('absensi.index') }}"
+      class="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 mb-5 flex flex-wrap gap-3 items-end">
+
+    <div>
+        <label class="block text-xs text-gray-500 mb-1">Dari Tanggal</label>
+        <input type="date" name="tgl_mulai" value="{{ $tglMulai->format('Y-m-d') }}"
+               class="px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400">
+    </div>
+
+    <div class="flex items-center self-end pb-2 text-gray-400">—</div>
+
+    <div>
+        <label class="block text-xs text-gray-500 mb-1">Sampai Tanggal</label>
+        <input type="date" name="tgl_akhir" value="{{ $tglAkhir->format('Y-m-d') }}"
+               class="px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400">
+    </div>
+
     <select name="status"
-            class="px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white">
+            class="px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white self-end">
         <option value="">Semua Status</option>
-        @foreach(['hadir','terlambat','izin','sakit','alfa','cuti'] as $s)
-            <option value="{{ $s }}" {{ request('status') === $s ? 'selected' : '' }}>{{ ucfirst($s) }}</option>
+        @foreach(['hadir','izin','sakit','alfa','cuti'] as $s)
+        <option value="{{ $s }}" {{ request('status') === $s ? 'selected' : '' }}>{{ ucfirst($s) }}</option>
         @endforeach
     </select>
-    <button class="px-4 py-2 text-sm bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition">Filter</button>
-    <a href="{{ route('absensi.index') }}" class="px-4 py-2 text-sm border border-gray-200 rounded-xl text-gray-600 hover:bg-gray-50 transition">Reset</a>
-    <div class="ml-auto flex gap-2">
-        <a href="{{ route('absensi.create') }}" class="px-4 py-2 text-sm bg-green-600 text-white rounded-xl hover:bg-green-700 transition flex items-center gap-1">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+
+    <button class="px-4 py-2 text-sm bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition font-medium self-end">
+        Tampilkan
+    </button>
+    <a href="{{ route('absensi.index') }}"
+       class="px-4 py-2 text-sm border border-gray-200 rounded-xl text-gray-600 hover:bg-gray-50 transition self-end">
+        Reset
+    </a>
+
+    <div class="ml-auto flex gap-2 self-end">
+        <a href="{{ route('absensi.create') }}"
+           class="px-4 py-2 text-sm bg-green-600 text-white rounded-xl hover:bg-green-700 transition flex items-center gap-1">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+            </svg>
             Input Manual
         </a>
-        <a href="{{ route('absensi.lokasi.index') }}" class="px-4 py-2 text-sm border border-gray-200 rounded-xl text-gray-600 hover:bg-gray-50 transition flex items-center gap-1">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+        <a href="{{ route('absensi.lokasi.index') }}"
+           class="px-4 py-2 text-sm border border-gray-200 rounded-xl text-gray-600 hover:bg-gray-50 transition flex items-center gap-1">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+            </svg>
             Lokasi GPS
         </a>
     </div>
@@ -33,11 +63,21 @@
 {{-- Ringkasan ────────────────────────────────────────────────────────────── --}}
 @php
     $cards = [
-        ['label' => 'Total Aktif', 'val' => $totalPegawaiAktif, 'color' => 'gray', 'icon' => 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z'],
-        ['label' => 'Hadir',       'val' => $ringkasan['hadir']     ?? 0, 'color' => 'green',  'icon' => 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z'],
-        ['label' => 'Terlambat',   'val' => $ringkasan['terlambat'] ?? $absensi->where('terlambat_menit', '>', 0)->count(), 'color' => 'yellow', 'icon' => 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z'],
-        ['label' => 'Izin/Sakit',  'val' => ($ringkasan['izin'] ?? 0) + ($ringkasan['sakit'] ?? 0), 'color' => 'blue', 'icon' => 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2'],
-        ['label' => 'Alfa',        'val' => $ringkasan['alfa']      ?? 0, 'color' => 'red',    'icon' => 'M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z'],
+        ['label' => $isRange ? 'Total Pegawai' : 'Total Aktif',
+         'val'   => $totalPegawaiAktif,  'color' => 'gray',
+         'icon'  => 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z'],
+        ['label' => 'Hadir',
+         'val'   => $ringkasan['hadir']  ?? 0, 'color' => 'green',
+         'icon'  => 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z'],
+        ['label' => 'Terlambat',
+         'val'   => $terlambatTotal,            'color' => 'yellow',
+         'icon'  => 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z'],
+        ['label' => 'Izin / Sakit',
+         'val'   => ($ringkasan['izin'] ?? 0) + ($ringkasan['sakit'] ?? 0), 'color' => 'blue',
+         'icon'  => 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2'],
+        ['label' => 'Alfa',
+         'val'   => $ringkasan['alfa']   ?? 0, 'color' => 'red',
+         'icon'  => 'M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z'],
     ];
 @endphp
 <div class="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-5">
@@ -64,8 +104,15 @@
 {{-- Tabel ────────────────────────────────────────────────────────────────── --}}
 <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
     <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-        <h3 class="text-sm font-semibold text-gray-700">Daftar Kehadiran</h3>
-        <span class="text-xs text-gray-400">{{ $absensi->total() }} pegawai</span>
+        <div>
+            <h3 class="text-sm font-semibold text-gray-700">Daftar Kehadiran</h3>
+            @if($isRange)
+            <p class="text-xs text-gray-400 mt-0.5">
+                {{ $tglMulai->translatedFormat('d M Y') }} — {{ $tglAkhir->translatedFormat('d M Y') }}
+            </p>
+            @endif
+        </div>
+        <span class="text-xs text-gray-400">{{ $absensi->total() }} record</span>
     </div>
 
     @if($absensi->isEmpty())
@@ -78,6 +125,9 @@
         <table class="w-full text-sm">
             <thead>
                 <tr class="bg-gray-50 text-xs text-gray-500 uppercase tracking-wide">
+                    @if($isRange)
+                    <th class="px-4 py-3 text-left">Tanggal</th>
+                    @endif
                     <th class="px-4 py-3 text-left">Pegawai</th>
                     <th class="px-4 py-3 text-left">Jam Masuk</th>
                     <th class="px-4 py-3 text-left">Jam Keluar</th>
@@ -91,6 +141,12 @@
             <tbody class="divide-y divide-gray-50">
                 @foreach($absensi as $a)
                 <tr class="hover:bg-gray-50/50 transition">
+                    @if($isRange)
+                    <td class="px-4 py-3 whitespace-nowrap">
+                        <div class="text-sm font-medium text-gray-700">{{ \Carbon\Carbon::parse($a->tanggal)->format('d M') }}</div>
+                        <div class="text-xs text-gray-400">{{ \Carbon\Carbon::parse($a->tanggal)->translatedFormat('D') }}</div>
+                    </td>
+                    @endif
                     <td class="px-4 py-3">
                         <div class="flex items-center gap-2">
                             <img src="{{ $a->pegawai?->foto_url }}" class="w-8 h-8 rounded-full object-cover border border-gray-100"

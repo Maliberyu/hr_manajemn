@@ -26,25 +26,39 @@ class AbsensiController extends Controller
 
     public function index(Request $request)
     {
-        $tanggal = $request->tanggal ? Carbon::parse($request->tanggal) : today();
+        $tglMulai = Carbon::parse($request->tgl_mulai ?? today()->toDateString())->startOfDay();
+        $tglAkhir = Carbon::parse($request->tgl_akhir ?? today()->toDateString())->endOfDay();
+
+        // Pastikan tgl_mulai <= tgl_akhir
+        if ($tglMulai->gt($tglAkhir)) {
+            [$tglMulai, $tglAkhir] = [$tglAkhir, $tglMulai];
+        }
+
+        $isRange  = $tglMulai->toDateString() !== $tglAkhir->toDateString();
+        $tanggal  = $tglMulai->copy();
 
         $absensi = Absensi::with('pegawai.departemenRef')
-            ->whereDate('tanggal', $tanggal)
+            ->whereBetween('tanggal', [$tglMulai->toDateString(), $tglAkhir->toDateString()])
             ->when($request->departemen, fn($q, $d) =>
                 $q->whereHas('pegawai', fn($p) => $p->where('departemen', $d)))
             ->when($request->status, fn($q, $s) => $q->where('status', $s))
-            ->orderBy('jam_masuk')
-            ->paginate(25)->withQueryString();
+            ->orderBy('tanggal')->orderBy('jam_masuk')
+            ->paginate(30)->withQueryString();
 
-        // Ringkasan harian
-        $ringkasan = Absensi::whereDate('tanggal', $tanggal)
+        $ringkasan = Absensi::whereBetween('tanggal', [$tglMulai->toDateString(), $tglAkhir->toDateString()])
             ->selectRaw('status, count(*) as total')
             ->groupBy('status')
             ->pluck('total', 'status');
 
+        $terlambatTotal = Absensi::whereBetween('tanggal', [$tglMulai->toDateString(), $tglAkhir->toDateString()])
+            ->where('terlambat_menit', '>', 0)->count();
+
         $totalPegawaiAktif = Pegawai::aktif()->count();
 
-        return view('absensi.index', compact('absensi', 'tanggal', 'ringkasan', 'totalPegawaiAktif'));
+        return view('absensi.index', compact(
+            'absensi', 'tanggal', 'ringkasan', 'terlambatTotal', 'totalPegawaiAktif',
+            'isRange', 'tglMulai', 'tglAkhir'
+        ));
     }
 
     // ─── Form input manual (oleh HR) ─────────────────────────────────────────
