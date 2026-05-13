@@ -394,16 +394,32 @@ class AbsensiController extends Controller
 
     public function generateRekap(Request $request)
     {
+        $bulan = (int) ($request->bulan ?? now()->month);
+        $tahun = (int) ($request->tahun ?? now()->year);
 
-        $bulan = $request->bulan ?? now()->subMonth()->month;
-        $tahun = $request->tahun ?? now()->subMonth()->year;
+        $jumlah = $this->prosesGenerateRekap($bulan, $tahun);
 
+        $label = \Carbon\Carbon::create($tahun, $bulan)->translatedFormat('F Y');
+        return back()->with('success', "Rekap {$label} berhasil digenerate untuk {$jumlah} karyawan.");
+    }
+
+    /**
+     * Core logic generate rekap — dipakai controller & Artisan command.
+     * Returns jumlah pegawai yang diproses.
+     */
+    public static function prosesGenerateRekap(int $bulan, int $tahun): int
+    {
         $pegawaiList = Pegawai::aktif()->get();
 
         foreach ($pegawaiList as $pegawai) {
             $rows = Absensi::where('pegawai_id', $pegawai->id)
                            ->bulan($tahun, $bulan)
                            ->get();
+
+            $lemburJam = \App\Models\Lembur::where('pegawai_id', $pegawai->id)
+                           ->where('status', 'Disetujui')
+                           ->bulan($tahun, $bulan)
+                           ->sum('durasi_jam');
 
             RekapAbsensi::updateOrCreate(
                 ['pegawai_id' => $pegawai->id, 'tahun' => $tahun, 'bulan' => $bulan],
@@ -415,12 +431,13 @@ class AbsensiController extends Controller
                     'total_cuti'            => $rows->where('status', 'cuti')->count(),
                     'total_terlambat'       => $rows->where('terlambat_menit', '>', 0)->count(),
                     'total_menit_terlambat' => $rows->sum('terlambat_menit'),
+                    'total_lembur_jam'      => round((float) $lemburJam, 2),
                     'wajib_masuk'           => $pegawai->wajibmasuk ?? 25,
                 ]
             );
         }
 
-        return back()->with('success', "Rekap bulan {$bulan}/{$tahun} berhasil digenerate.");
+        return $pegawaiList->count();
     }
 
     // ─── Export Excel ─────────────────────────────────────────────────────────
