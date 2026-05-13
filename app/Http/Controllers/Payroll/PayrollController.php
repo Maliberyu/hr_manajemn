@@ -263,6 +263,22 @@ class PayrollController extends Controller
         return back()->with('success', 'Slip dikembalikan ke draft.');
     }
 
+    public function finalizeBulk(Request $request)
+    {
+        $request->validate([
+            'slip_ids'   => 'required|array|min:1',
+            'slip_ids.*' => 'integer|exists:hr_slip_gaji,id',
+        ], [
+            'slip_ids.required' => 'Pilih minimal satu slip untuk difinalisasi.',
+        ]);
+
+        $count = SlipGaji::whereIn('id', $request->slip_ids)
+            ->where('status', 'draft')
+            ->update(['status' => 'final', 'finalized_at' => now()]);
+
+        return back()->with('success', "{$count} slip gaji berhasil difinalisasi.");
+    }
+
     // ─── PDF Slip ─────────────────────────────────────────────────────────────
 
     public function slipPdf(SlipGaji $slip)

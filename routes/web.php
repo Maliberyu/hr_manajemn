@@ -198,6 +198,7 @@ Route::middleware(['auth', 'role:hrd,admin'])->group(function () {
         Route::put('/slip/{slip}',                         [PayrollController::class, 'updateSlip'])->name('slip.update');
         Route::post('/slip/{slip}/finalize',               [PayrollController::class, 'finalizeSlip'])->name('slip.finalize');
         Route::post('/slip/{slip}/unfinalize',             [PayrollController::class, 'unFinalizeSlip'])->name('slip.unfinalize');
+        Route::post('/finalize-bulk',                      [PayrollController::class, 'finalizeBulk'])->name('slip.finalize.bulk');
         Route::get('/slip/{slip}/pdf',                     [PayrollController::class, 'slipPdf'])->name('slip.pdf');
     });
 
