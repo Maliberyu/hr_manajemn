@@ -394,7 +394,7 @@
     @php
         $kpiDisabled = !config('features.kpi', true);
         $kpiActive   = request()->routeIs('kpi.*');
-        $kpiIcon     = 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z';
+        $kpiIcon     = 'M3 17l6-6 4 4 8-8';
     @endphp
     <div x-data="{ open: {{ !$kpiDisabled && $kpiActive ? 'true' : 'false' }} }">
         <button @click="{{ $kpiDisabled ? 'featureModal = true' : 'open = !open' }}"
@@ -412,9 +412,11 @@
                 <path stroke-width="2" d="M19 9l-7 7-7-7"/>
             </svg>
             @else
-            <svg x-show="sidebarOpen" class="w-3.5 h-3.5 opacity-50 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+            <svg x-show="sidebarOpen" class="w-3.5 h-3.5 transition-transform" :class="open?'rotate-180':''"
+                 fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-width="2" d="M19 9l-7 7-7-7"/>
             </svg>
+             </span>
             @endif
         </button>
         @if(!$kpiDisabled)
