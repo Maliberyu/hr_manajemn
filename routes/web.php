@@ -23,6 +23,7 @@ use App\Http\Controllers\Pengaturan\AtasanPegawaiController;
 use App\Http\Controllers\Ijin\IjinController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\Kpi\KpiController;
 
 // ─── Redirect root ──────────────────────────────────────────────────────────────
 Route::get('/', fn() => redirect()->route('dashboard'));
@@ -238,6 +239,14 @@ Route::middleware(['auth', 'role:hrd,admin'])->group(function () {
             Route::get('/{sesi}/rekap',     [Penilaian360Controller::class, 'rekap'])->name('rekap');
             Route::post('/{sesi}/tutup',    [Penilaian360Controller::class, 'tutup'])->name('tutup');
         });
+    });
+
+    // ── KPI ────────────────────────────────────────────────────────────────────
+    Route::prefix('kpi')->name('kpi.')->middleware('feature:kpi')->group(function () {
+        Route::get('/',            [KpiController::class, 'index'])->name('index');
+        Route::get('/target',      [KpiController::class, 'target'])->name('target');
+        Route::post('/target',     [KpiController::class, 'saveTarget'])->name('target.save');
+        Route::get('/rekap',       [KpiController::class, 'rekap'])->name('rekap');
     });
 
     // ── Rekrutmen ──────────────────────────────────────────────────────────────

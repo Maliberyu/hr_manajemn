@@ -18,6 +18,7 @@ return [
     'shift'       => env('FEATURE_SHIFT', true),
     'payroll'     => env('FEATURE_PAYROLL', true),
     'kinerja'     => env('FEATURE_KINERJA', true),
+    'kpi'         => env('FEATURE_KPI', true),
     'rekrutmen'   => env('FEATURE_REKRUTMEN', true),
     'training'    => env('FEATURE_TRAINING', true),
     'absensi_gps' => env('FEATURE_ABSENSI_GPS', true),
