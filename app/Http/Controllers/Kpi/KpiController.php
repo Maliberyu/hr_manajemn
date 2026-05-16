@@ -303,14 +303,13 @@ class KpiController extends Controller
         $distribusi = $kpiList->whereNotNull('predikat')->groupBy('predikat')->map->count();
 
         // Per departemen
-        $perDep = $kpiList->whereNotNull('skorKPI')
+        $perDepRaw = $kpiList->whereNotNull('skorKPI')
             ->groupBy(fn($r) => $r['pegawai']->departemenRef?->nama ?? $r['pegawai']->departemen ?? 'Lainnya')
-            ->map(fn($g) => ['count'=>$g->count(),'avg'=>round($g->avg('skorKPI'),1)])
+            ->map(fn($g, $dep) => ['dep'=>$dep, 'count'=>$g->count(), 'avg'=>round($g->avg('skorKPI'),1)])
             ->sortByDesc('avg')->values();
 
-        $grafikDep  = $perDep->pluck('avg','0')->toArray(); // not quite right, fix:
-        $grafikDep  = $perDep->map(fn($d,$k)=>$d)->values();
-        $depLabels  = $perDep->keys()->values();
+        $perDep    = $perDepRaw;
+        $depLabels = $perDepRaw->pluck('dep')->values();
 
         $departemen = Departemen::orderBy('nama')->get(['dep_id','nama']);
 
