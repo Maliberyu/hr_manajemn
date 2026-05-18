@@ -286,8 +286,22 @@ class CutiController extends Controller
 
     public function saldo(Request $request)
     {
+        $user = auth()->user();
+
+        // Filter berdasarkan role
+        $nikFilter = null;
+        if ($user->hasRole('karyawan')) {
+            // Karyawan hanya lihat dirinya sendiri — redirect ke ESS
+            return redirect()->route('ess.dashboard', ['tab' => 'cuti']);
+        } elseif ($user->hasRole('atasan')) {
+            $nikBawahan = AtasanPegawai::nikBawahan($user->id);
+            $nikSendiri = $user->pegawai?->nik ?? '';
+            $nikFilter  = array_filter(array_unique(array_merge([$nikSendiri], $nikBawahan)));
+        }
+
         $pegawai = Pegawai::aktif()
             ->with('departemenRef')
+            ->when($nikFilter, fn($q) => $q->whereIn('nik', $nikFilter))
             ->when($request->departemen, fn($q, $d) => $q->departemen($d))
             ->withSum(
                 ['pengajuanCuti as cuti_tahun_ini' => fn($q) =>
