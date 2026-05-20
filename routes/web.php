@@ -24,6 +24,12 @@ use App\Http\Controllers\Ijin\IjinController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Kpi\KpiController;
+use App\Http\Controllers\Rekrutmen\RekrutmenDashboardController;
+use App\Http\Controllers\Rekrutmen\RekrutmenRequestController;
+use App\Http\Controllers\Rekrutmen\LowonganController;
+use App\Http\Controllers\Rekrutmen\PelamarController;
+use App\Http\Controllers\Rekrutmen\InterviewController;
+use App\Http\Controllers\Rekrutmen\OfferingController;
 
 // ─── Redirect root ──────────────────────────────────────────────────────────────
 Route::get('/', fn() => redirect()->route('dashboard'));
@@ -125,6 +131,23 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/{eksternal}/tolak-hrd',               [TrainingEksternalController::class, 'tolakHrd'])->name('tolak.hrd');
         Route::post('/{eksternal}/upload-sertifikat',       [TrainingEksternalController::class, 'uploadSertifikat'])->name('upload.sertifikat');
         Route::post('/{eksternal}/validasi',                [TrainingEksternalController::class, 'validasi'])->name('validasi');
+    });
+
+    // ── Rekrutmen — Dashboard + Permintaan SDM (semua role: atasan bisa akses) ──
+    Route::prefix('rekrutmen')->name('rekrutmen.')->middleware('feature:rekrutmen')->group(function () {
+        Route::get('/',  [RekrutmenDashboardController::class, 'index'])->name('dashboard');
+
+        Route::prefix('request')->name('request.')->group(function () {
+            Route::get('/',                              [RekrutmenRequestController::class, 'index'])->name('index');
+            Route::get('/buat',                         [RekrutmenRequestController::class, 'create'])->name('create');
+            Route::post('/',                            [RekrutmenRequestController::class, 'store'])->name('store');
+            Route::get('/{rekrutmenRequest}',           [RekrutmenRequestController::class, 'show'])->name('show');
+            // Approve/tolak hanya HRD — ditangani di controller dengan abort_unless
+            Route::post('/{rekrutmenRequest}/setujui',  [RekrutmenRequestController::class, 'setujui'])->name('setujui');
+            Route::post('/{rekrutmenRequest}/eskalasi', [RekrutmenRequestController::class, 'eskalasi'])->name('eskalasi');
+            Route::post('/{rekrutmenRequest}/approve',  [RekrutmenRequestController::class, 'approve'])->name('approve');
+            Route::post('/{rekrutmenRequest}/tolak',    [RekrutmenRequestController::class, 'tolak'])->name('tolak');
+        });
     });
 });
 
@@ -249,19 +272,48 @@ Route::middleware(['auth', 'role:hrd,admin'])->group(function () {
         Route::get('/rekap',       [KpiController::class, 'rekap'])->name('rekap');
     });
 
-    // ── Rekrutmen ──────────────────────────────────────────────────────────────
+    // ── Rekrutmen HRD — Lowongan, Pelamar, Interview, Offering ───────────────
     Route::prefix('rekrutmen')->name('rekrutmen.')->middleware('feature:rekrutmen')->group(function () {
-        Route::get('/',                                 [RekrutmenController::class, 'index'])->name('index');
-        Route::get('/buat',                             [RekrutmenController::class, 'create'])->name('create');
-        Route::post('/',                                [RekrutmenController::class, 'store'])->name('store');
-        Route::get('/{rekrutmen}',                      [RekrutmenController::class, 'show'])->name('show');
-        Route::get('/{rekrutmen}/edit',                 [RekrutmenController::class, 'edit'])->name('edit');
-        Route::put('/{rekrutmen}',                      [RekrutmenController::class, 'update'])->name('update');
-        Route::delete('/{rekrutmen}',                   [RekrutmenController::class, 'destroy'])->name('destroy');
-        Route::post('/{rekrutmen}/pelamar',             [RekrutmenController::class, 'storePelamar'])->name('pelamar.store');
-        Route::put('/{rekrutmen}/pelamar/{pelamar}/status',[RekrutmenController::class, 'updateStatusPelamar'])->name('pelamar.status');
-        Route::get('/{rekrutmen}/pelamar/{pelamar}/cv', [RekrutmenController::class, 'downloadCv'])->name('pelamar.cv');
-        Route::delete('/{rekrutmen}/pelamar/{pelamar}',[RekrutmenController::class, 'destroyPelamar'])->name('pelamar.destroy');
+        // Lowongan
+        Route::prefix('lowongan')->name('lowongan.')->group(function () {
+            Route::get('/',              [LowonganController::class, 'index'])->name('index');
+            Route::get('/buat',          [LowonganController::class, 'create'])->name('create');
+            Route::post('/',             [LowonganController::class, 'store'])->name('store');
+            Route::get('/{lowongan}',    [LowonganController::class, 'show'])->name('show');
+            Route::get('/{lowongan}/edit',[LowonganController::class, 'edit'])->name('edit');
+            Route::put('/{lowongan}',    [LowonganController::class, 'update'])->name('update');
+            Route::delete('/{lowongan}', [LowonganController::class, 'destroy'])->name('destroy');
+        });
+
+        // Pelamar
+        Route::prefix('pelamar')->name('pelamar.')->group(function () {
+            Route::get('/',                        [PelamarController::class, 'index'])->name('index');
+            Route::get('/buat',                    [PelamarController::class, 'create'])->name('create');
+            Route::post('/',                       [PelamarController::class, 'store'])->name('store');
+            Route::get('/{pelamar}',               [PelamarController::class, 'show'])->name('show');
+            Route::post('/{pelamar}/status',       [PelamarController::class, 'updateStatus'])->name('status');
+            Route::get('/{pelamar}/cv',            [PelamarController::class, 'downloadCv'])->name('cv');
+            Route::delete('/{pelamar}',            [PelamarController::class, 'destroy'])->name('destroy');
+        });
+
+        // Interview
+        Route::prefix('interview')->name('interview.')->group(function () {
+            Route::get('/',                             [InterviewController::class, 'index'])->name('index');
+            Route::get('/buat',                         [InterviewController::class, 'create'])->name('create');
+            Route::post('/',                            [InterviewController::class, 'store'])->name('store');
+            Route::get('/{interview}',                  [InterviewController::class, 'show'])->name('show');
+            Route::post('/{interview}/selesai',         [InterviewController::class, 'selesai'])->name('selesai');
+            Route::post('/{interview}/batal',           [InterviewController::class, 'batal'])->name('batal');
+            Route::post('/{interview}/penilaian',       [InterviewController::class, 'storePenilaian'])->name('penilaian.store');
+        });
+
+        // Offering
+        Route::prefix('offering')->name('offering.')->group(function () {
+            Route::get('/',                        [OfferingController::class, 'index'])->name('index');
+            Route::get('/buat',                    [OfferingController::class, 'create'])->name('create');
+            Route::post('/',                       [OfferingController::class, 'store'])->name('store');
+            Route::post('/{offering}/status',      [OfferingController::class, 'updateStatus'])->name('status');
+        });
     });
 
     // ── Training IHT + Setting ─────────────────────────────────────────────────

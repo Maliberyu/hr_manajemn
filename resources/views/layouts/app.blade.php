@@ -74,7 +74,7 @@
                 ['label'=>'Lembur',           'route'=>'lembur.index',     'icon'=>'M13 10V3L4 14h7v7l9-11h-7z'],
                 ['label'=>'Payroll',          'route'=>'payroll.index',    'icon'=>'M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z'],
                 ['label'=>'Penilaian Kinerja','route'=>'kinerja.index',    'icon'=>'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z'],
-                ['label'=>'Rekrutmen',        'route'=>'rekrutmen.index',  'icon'=>'M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z'],
+                ['label'=>'Rekrutmen',        'route'=>'rekrutmen.dashboard','icon'=>'M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z'],
                 ['label'=>'Manajemen User',   'route'=>'pengaturan.users.index', 'icon'=>'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z'],
             ];
 
@@ -179,8 +179,7 @@
             $badgeCuti      = \App\Models\PengajuanCuti::where('status', 'Menunggu HRD')->count();
             $badgeLembur    = \App\Models\Lembur::where('status', 'Menunggu HRD')->count();
             $badgeEksternal = \App\Models\TrainingEksternal::whereIn('status', ['menunggu_hrd', 'menunggu_validasi'])->count();
-            // Rekrutmen ada di SIK — hanya pakai filter status tanpa tanggal_tutup
-            $badgeRekrutmen = \App\Models\Rekrutmen::where('status', 'buka')->count();
+            $badgeRekrutmen = \App\Models\RekrutmenRequest::menunggu()->count();
         }
     } catch (\Throwable $e) {
         // Badge tidak tampil jika DB error — tidak crash halaman
@@ -326,6 +325,49 @@
     </div>
     {!! navLink('Lembur', 'lembur.index', 'M13 10V3L4 14h7v7l9-11h-7z', $badgeLembur, 'lembur') !!}
     {!! navLink('Training Eksternal', 'training.eksternal.index', $trainingIcon, $badgeEksternal, 'training') !!}
+
+    {{-- Permintaan SDM (atasan bisa ajukan & lihat status) --}}
+    @if(config('features.rekrutmen', true))
+    @php
+        $reqAtasanActive  = request()->routeIs('rekrutmen.request.*') || request()->routeIs('rekrutmen.dashboard');
+        $reqAtasanPending = 0;
+        try { $reqAtasanPending = \App\Models\RekrutmenRequest::where('user_id', auth()->id())->whereIn('status',['menunggu_hrd','menunggu_direktur'])->count(); } catch(\Throwable $e) {}
+    @endphp
+    <div x-data="{ open: {{ $reqAtasanActive ? 'true' : 'false' }} }">
+        <button @click="open = !open"
+                class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition
+                       {{ $reqAtasanActive ? 'bg-blue-500/30 text-white' : 'text-blue-200 hover:bg-blue-800/50 hover:text-white' }}">
+            <svg class="w-5 h-5 flex-shrink-0 {{ $reqAtasanActive ? 'text-blue-300' : 'text-blue-400' }}"
+                 fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
+                      d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/>
+            </svg>
+            <span x-show="sidebarOpen" class="flex-1 text-left whitespace-nowrap">Permintaan SDM</span>
+            @if($reqAtasanPending > 0)
+            <span x-show="sidebarOpen" class="px-1.5 py-0.5 text-xs bg-yellow-400 text-white rounded-full font-bold leading-none">{{ $reqAtasanPending }}</span>
+            @else
+            <svg x-show="sidebarOpen" class="w-3.5 h-3.5 transition-transform" :class="open?'rotate-180':''"
+                 fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-width="2" d="M19 9l-7 7-7-7"/>
+            </svg>
+            @endif
+        </button>
+        <div x-show="open && sidebarOpen" x-cloak class="ml-4 mt-0.5 space-y-0.5">
+            @foreach([
+                ['Permintaan Saya', 'rekrutmen.request.index',  'rekrutmen.request.index'],
+                ['Ajukan Baru',     'rekrutmen.request.create', 'rekrutmen.request.create'],
+            ] as [$lbl, $rt, $match])
+            @php $sa = request()->routeIs($match); @endphp
+            <a href="{{ route($rt) }}"
+               class="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium transition
+                      {{ $sa ? 'bg-blue-500/20 text-white' : 'text-blue-300 hover:bg-blue-800/40 hover:text-white' }}">
+                <span class="w-1 h-1 rounded-full bg-current opacity-60 flex-shrink-0"></span>{{ $lbl }}
+            </a>
+            @endforeach
+        </div>
+    </div>
+    @endif
+
     @php
         $slipAtasan = 0;
         try { $slipAtasan = \App\Models\SlipGaji::where('pegawai_id', auth()->user()->pegawai?->id)->final()->count(); } catch(\Throwable $e) {}
@@ -437,7 +479,61 @@
         @endif
     </div>
 
-    {!! navLink('Rekrutmen', 'rekrutmen.index', 'M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z', $badgeRekrutmen, 'rekrutmen') !!}
+    {{-- Rekrutmen: dropdown ─────────────────────────────────────────────────── --}}
+    @php
+        $rekrutmenDisabled = !config('features.rekrutmen', true);
+        $rekrutmenActive   = request()->routeIs('rekrutmen.*');
+        $rekrutmenIcon     = 'M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z';
+        $badgeReqMenu      = $rekrutmenDisabled ? 0 : (int) \App\Models\RekrutmenRequest::menunggu()->count();
+    @endphp
+    <div x-data="{ open: {{ !$rekrutmenDisabled && $rekrutmenActive ? 'true' : 'false' }} }">
+        <button @click="{{ $rekrutmenDisabled ? 'featureModal = true' : 'open = !open' }}"
+                class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition group
+                       {{ $rekrutmenActive ? 'bg-blue-500/30 text-white' : 'text-blue-200 hover:bg-blue-800/50 hover:text-white' }}
+                       {{ $rekrutmenDisabled ? 'opacity-60' : '' }}">
+            <svg class="w-5 h-5 flex-shrink-0 {{ $rekrutmenActive ? 'text-blue-300' : 'text-blue-400 group-hover:text-blue-200' }}"
+                 fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="{{ $rekrutmenIcon }}"/>
+            </svg>
+            <span x-show="sidebarOpen" class="flex-1 text-left">Rekrutmen</span>
+            @if(!$rekrutmenDisabled)
+                @if($badgeReqMenu > 0)
+                <span x-show="sidebarOpen" class="px-1.5 py-0.5 text-xs bg-yellow-400 text-white rounded-full font-bold">{{ $badgeReqMenu }}</span>
+                @endif
+                <svg x-show="sidebarOpen" class="w-3.5 h-3.5 transition-transform" :class="open?'rotate-180':''"
+                     fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-width="2" d="M19 9l-7 7-7-7"/>
+                </svg>
+            @else
+                <svg x-show="sidebarOpen" class="w-3.5 h-3.5 opacity-50 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                </svg>
+            @endif
+        </button>
+        @if(!$rekrutmenDisabled)
+        <div x-show="open && sidebarOpen" x-cloak class="ml-4 mt-0.5 space-y-0.5">
+            @foreach([
+                ['Dashboard',      'rekrutmen.dashboard',    'rekrutmen.dashboard'],
+                ['Permintaan SDM', 'rekrutmen.request.index','rekrutmen.request.*'],
+                ['Lowongan',       'rekrutmen.lowongan.index','rekrutmen.lowongan.*'],
+                ['Pelamar',        'rekrutmen.pelamar.index', 'rekrutmen.pelamar.*'],
+                ['Interview',      'rekrutmen.interview.index','rekrutmen.interview.*'],
+                ['Offering',       'rekrutmen.offering.index','rekrutmen.offering.*'],
+            ] as [$lbl, $rt, $match])
+            @php $sa = request()->routeIs($match); @endphp
+            <a href="{{ route($rt) }}"
+               class="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium transition
+                      {{ $sa ? 'bg-blue-500/20 text-white' : 'text-blue-300 hover:bg-blue-800/40 hover:text-white' }}">
+                <span class="w-1 h-1 rounded-full bg-current opacity-60 flex-shrink-0"></span>
+                {{ $lbl }}
+                @if($lbl === 'Permintaan SDM' && $badgeReqMenu > 0)
+                <span class="ml-auto px-1.5 py-0.5 text-xs bg-yellow-400 text-white rounded-full font-bold leading-none">{{ $badgeReqMenu }}</span>
+                @endif
+            </a>
+            @endforeach
+        </div>
+        @endif
+    </div>
 
     {{-- Training: dropdown IHT + Eksternal + Setting --}}
     @php $trainingDisabled = !config('features.training', true); @endphp
