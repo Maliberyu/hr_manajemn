@@ -57,6 +57,62 @@
         </div>
     </div>
 
+    {{-- QR Code Absensi --}}
+    @if(in_array($iht->status, ['aktif','selesai']))
+    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5"
+         x-data="qrAbsensi({{ $iht->id }})">
+        <div class="flex items-center justify-between mb-4">
+            <div>
+                <h3 class="text-sm font-semibold text-gray-800">QR Absensi Peserta</h3>
+                <p class="text-xs text-gray-400 mt-0.5">Peserta scan QR ini dari HP untuk absensi. Berlaku 24 jam.</p>
+            </div>
+            <button @click="loadQr()"
+                    :class="shown ? 'bg-gray-100 text-gray-600' : 'bg-blue-600 text-white hover:bg-blue-700'"
+                    class="px-4 py-2 text-xs font-semibold rounded-xl transition"
+                    x-text="shown ? 'Sembunyikan QR' : 'Tampilkan QR Absensi'">
+            </button>
+        </div>
+
+        <div x-show="shown" x-cloak>
+            <div x-show="loading" class="text-center py-6 text-sm text-gray-400">
+                Memuat QR code...
+            </div>
+
+            <div x-show="!loading" class="grid grid-cols-2 gap-6">
+                {{-- QR Masuk --}}
+                <div class="text-center">
+                    <div class="mb-3">
+                        <span class="inline-block px-3 py-1 text-xs font-bold bg-blue-100 text-blue-700 rounded-full">
+                            ABSENSI MASUK
+                        </span>
+                    </div>
+                    <div id="qrMasuk" class="flex justify-center mb-2"></div>
+                    <p class="text-xs text-gray-400">Scan saat tiba</p>
+                </div>
+
+                {{-- QR Selesai --}}
+                <div class="text-center">
+                    <div class="mb-3">
+                        <span class="inline-block px-3 py-1 text-xs font-bold bg-orange-100 text-orange-700 rounded-full">
+                            ABSENSI SELESAI
+                        </span>
+                    </div>
+                    <div id="qrSelesai" class="flex justify-center mb-2"></div>
+                    <p class="text-xs text-gray-400">Scan saat pulang</p>
+                </div>
+            </div>
+
+            <div x-show="!loading" class="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-xl text-xs text-yellow-700 flex items-start gap-2">
+                <svg class="w-4 h-4 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                <span>Peserta scan QR → login dengan akun HR Manajemen → konfirmasi absensi. QR berlaku 24 jam sejak dibuka.</span>
+            </div>
+        </div>
+    </div>
+    @endif
+
     {{-- Tambah Peserta --}}
     @if($iht->status === 'aktif' && $pegawaiBelum->count())
     <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5" x-data="{ open: false }">
@@ -116,6 +172,9 @@
                 <tr>
                     <th class="px-4 py-2.5 text-left text-xs font-semibold text-gray-600">Peserta</th>
                     <th class="px-4 py-2.5 text-center text-xs font-semibold text-gray-600">Status</th>
+                    <th class="px-4 py-2.5 text-center text-xs font-semibold text-blue-600">Masuk</th>
+                    <th class="px-4 py-2.5 text-center text-xs font-semibold text-orange-500">Selesai</th>
+                    <th class="px-4 py-2.5 text-center text-xs font-semibold text-gray-600">Durasi</th>
                     <th class="px-4 py-2.5 text-center text-xs font-semibold text-gray-600">Nilai</th>
                     <th class="px-4 py-2.5 text-center text-xs font-semibold text-gray-600">No. Sertifikat</th>
                     <th class="px-4 py-2.5 text-center text-xs font-semibold text-gray-600">Aksi</th>
@@ -146,6 +205,33 @@
                             </select>
                         </form>
                     </td>
+                    {{-- Jam Masuk --}}
+                    <td class="px-3 py-3 text-center">
+                        @if($p->check_in_at)
+                        <span class="text-sm font-bold text-blue-700">{{ $p->check_in_at->format('H:i') }}</span>
+                        <span class="block text-[10px] text-gray-400">{{ $p->check_in_at->format('d/m') }}</span>
+                        @else
+                        <span class="text-gray-300 text-xs">—</span>
+                        @endif
+                    </td>
+                    {{-- Jam Selesai --}}
+                    <td class="px-3 py-3 text-center">
+                        @if($p->check_out_at)
+                        <span class="text-sm font-bold text-orange-600">{{ $p->check_out_at->format('H:i') }}</span>
+                        <span class="block text-[10px] text-gray-400">{{ $p->check_out_at->format('d/m') }}</span>
+                        @else
+                        <span class="text-gray-300 text-xs">—</span>
+                        @endif
+                    </td>
+                    {{-- Durasi --}}
+                    <td class="px-3 py-3 text-center">
+                        @if($p->durasi_hadir)
+                        <span class="text-xs font-semibold text-green-700">{{ $p->durasi_hadir }}</span>
+                        @else
+                        <span class="text-gray-300 text-xs">—</span>
+                        @endif
+                    </td>
+                    {{-- Nilai --}}
                     <td class="px-4 py-3 text-center">
                         <form method="POST" action="{{ route('training.iht.peserta.status', [$iht, $p]) }}" class="inline-flex items-center gap-1">
                             @csrf @method('PUT')
@@ -211,5 +297,76 @@
 
 @push('styles')
 <style>[x-cloak]{display:none!important}</style>
+@endpush
+
+@push('scripts')
+{{-- QRCode.js untuk generate QR di browser --}}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+function qrAbsensi(ihtId) {
+    return {
+        shown:   false,
+        loading: false,
+        qrMasuk:   null,
+        qrSelesai: null,
+
+        // URL endpoint diambil dari Blade agar tidak salah subdirectory
+        urlMasuk:   '{{ route("training.iht.peserta.absensi.url", [$iht->id, "masuk"]) }}',
+        urlSelesai: '{{ route("training.iht.peserta.absensi.url", [$iht->id, "selesai"]) }}',
+        csrf:       '{{ csrf_token() }}',
+
+        async loadQr() {
+            this.shown = !this.shown;
+            if (!this.shown || this.qrMasuk) return;
+
+            this.loading = true;
+            await this.$nextTick();
+
+            try {
+                const headers = { 'X-CSRF-TOKEN': this.csrf, 'Accept': 'application/json' };
+                const [resMasuk, resSelesai] = await Promise.all([
+                    fetch(this.urlMasuk,   { headers }),
+                    fetch(this.urlSelesai, { headers }),
+                ]);
+
+                const dataMasuk   = await resMasuk.json();
+                const dataSelesai = await resSelesai.json();
+
+                this.loading = false;
+                await this.$nextTick();
+
+                // Generate QR masuk
+                document.getElementById('qrMasuk').innerHTML = '';
+                new QRCode(document.getElementById('qrMasuk'), {
+                    text:   dataMasuk.url,
+                    width:  180,
+                    height: 180,
+                    colorDark:  '#1d4ed8',
+                    colorLight: '#eff6ff',
+                    correctLevel: QRCode.CorrectLevel.M,
+                });
+
+                // Generate QR selesai
+                document.getElementById('qrSelesai').innerHTML = '';
+                new QRCode(document.getElementById('qrSelesai'), {
+                    text:   dataSelesai.url,
+                    width:  180,
+                    height: 180,
+                    colorDark:  '#ea580c',
+                    colorLight: '#fff7ed',
+                    correctLevel: QRCode.CorrectLevel.M,
+                });
+
+                this.qrMasuk   = dataMasuk.url;
+                this.qrSelesai = dataSelesai.url;
+
+            } catch (e) {
+                this.loading = false;
+                alert('Gagal memuat QR code. Coba lagi.');
+            }
+        }
+    };
+}
+</script>
 @endpush
 @endsection

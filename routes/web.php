@@ -30,9 +30,14 @@ use App\Http\Controllers\Rekrutmen\LowonganController;
 use App\Http\Controllers\Rekrutmen\PelamarController;
 use App\Http\Controllers\Rekrutmen\InterviewController;
 use App\Http\Controllers\Rekrutmen\OfferingController;
+use App\Http\Controllers\Training\IhtAbsensiController;
 
 // ─── Redirect root ──────────────────────────────────────────────────────────────
 Route::get('/', fn() => redirect()->route('dashboard'));
+
+// ─── Absensi IHT publik (signed URL — dari QR code peserta) ────────────────────
+Route::get('/iht/{iht}/hadir/{jenis}',  [IhtAbsensiController::class, 'form'])->name('iht.hadir.form');
+Route::post('/iht/{iht}/hadir/{jenis}', [IhtAbsensiController::class, 'simpan'])->name('iht.hadir.simpan');
 
 // ─── Auth routes (publik) ───────────────────────────────────────────────────────
 Route::get('/login',    [LoginController::class, 'showLogin'])->name('login');
@@ -337,6 +342,8 @@ Route::middleware(['auth', 'role:hrd,admin'])->group(function () {
             Route::get( '/{iht}/peserta/{peserta}/sertifikat',         [TrainingController::class, 'previewSertifikat'])->name('peserta.sertifikat.preview');
             Route::post('/{iht}/peserta/{peserta}/sertifikat',        [TrainingController::class, 'generateSertifikat'])->name('peserta.sertifikat.generate');
             Route::get( '/{iht}/peserta/{peserta}/sertifikat/download',[TrainingController::class, 'downloadSertifikat'])->name('peserta.sertifikat.download');
+            // Generate signed URL untuk QR absensi
+            Route::get('/{iht}/absensi-url/{jenis}', [IhtAbsensiController::class, 'generateUrl'])->name('peserta.absensi.url');
         });
     });
 });

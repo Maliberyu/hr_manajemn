@@ -13,12 +13,24 @@ class IHTPeserta extends Model
     protected $fillable = [
         'iht_id', 'pegawai_id', 'status', 'nilai',
         'nomor_sertifikat', 'sertifikat_path', 'sertifikat_at',
+        'check_in_at', 'check_out_at',
     ];
 
     protected $casts = [
         'sertifikat_at' => 'datetime',
+        'check_in_at'   => 'datetime',
+        'check_out_at'  => 'datetime',
         'nilai'         => 'float',
     ];
+
+    public function getDurasiHadirAttribute(): ?string
+    {
+        if (!$this->check_in_at || !$this->check_out_at) return null;
+        $menit = $this->check_in_at->diffInMinutes($this->check_out_at);
+        $j = intdiv($menit, 60);
+        $m = $menit % 60;
+        return $j > 0 ? "{$j}j " . ($m > 0 ? "{$m}m" : '') : "{$m}m";
+    }
 
     const STATUS = [
         'terdaftar'   => 'Terdaftar',
