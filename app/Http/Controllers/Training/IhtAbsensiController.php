@@ -12,16 +12,23 @@ class IhtAbsensiController extends Controller
 {
     // ── Generate signed URL untuk QR (dipanggil dari IHT show) ───────────────
 
-    public function generateUrl(IHT $iht, string $jenis)
+    public function generateUrl(Request $request, IHT $iht, string $jenis)
     {
         abort_unless(in_array($jenis, ['masuk', 'selesai']), 404);
         abort_unless(auth()->user()->hasRole(['hrd', 'admin']), 403);
 
-        // Signed URL berlaku 24 jam
+        // Paksa root URL pakai hostname request saat ini
+        // → QR URL selalu sesuai server tempat HRD membuka halaman,
+        //   tidak tergantung APP_URL di .env
+        URL::forceRootUrl($request->root());
+
         $url = URL::signedRoute('iht.hadir.form', [
             'iht'   => $iht->id,
             'jenis' => $jenis,
         ], now()->addHours(24));
+
+        // Reset setelah generate agar tidak mempengaruhi response lain
+        URL::forceRootUrl(null);
 
         return response()->json(['url' => $url]);
     }
@@ -30,7 +37,12 @@ class IhtAbsensiController extends Controller
 
     public function form(Request $request, IHT $iht, string $jenis)
     {
-        abort_unless($request->hasValidSignature(), 403, 'Link tidak valid atau sudah kadaluarsa.');
+        // Verifikasi signature dengan root URL dari request saat ini
+        URL::forceRootUrl($request->root());
+        $valid = $request->hasValidSignature();
+        URL::forceRootUrl(null);
+
+        abort_unless($valid, 403, 'Link tidak valid atau sudah kadaluarsa.');
         abort_unless(in_array($jenis, ['masuk', 'selesai']), 404);
 
         // Jika belum login → simpan intended URL lalu redirect ke login
@@ -92,7 +104,10 @@ class IhtAbsensiController extends Controller
 
     public function simpan(Request $request, IHT $iht, string $jenis)
     {
-        abort_unless($request->hasValidSignature(), 403);
+        URL::forceRootUrl($request->root());
+        $valid = $request->hasValidSignature();
+        URL::forceRootUrl(null);
+        abort_unless($valid, 403);
         abort_unless(in_array($jenis, ['masuk', 'selesai']), 404);
         abort_unless(auth()->check(), 401);
 
