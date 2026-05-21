@@ -310,9 +310,9 @@ function qrAbsensi(ihtId) {
         qrMasuk:   null,
         qrSelesai: null,
 
-        // URL endpoint diambil dari Blade agar tidak salah subdirectory
-        urlMasuk:   '{{ route("training.iht.peserta.absensi.url", [$iht->id, "masuk"]) }}',
-        urlSelesai: '{{ route("training.iht.peserta.absensi.url", [$iht->id, "selesai"]) }}',
+        // Path-only (tanpa domain) — agar tidak tergantung APP_URL, jalan di server manapun
+        urlMasuk:   '{{ parse_url(route("training.iht.peserta.absensi.url", [$iht->id, "masuk"]), PHP_URL_PATH) }}',
+        urlSelesai: '{{ parse_url(route("training.iht.peserta.absensi.url", [$iht->id, "selesai"]), PHP_URL_PATH) }}',
         csrf:       '{{ csrf_token() }}',
 
         async loadQr() {
