@@ -31,6 +31,10 @@ use App\Http\Controllers\Rekrutmen\PelamarController;
 use App\Http\Controllers\Rekrutmen\InterviewController;
 use App\Http\Controllers\Rekrutmen\OfferingController;
 use App\Http\Controllers\Training\IhtAbsensiController;
+use App\Http\Controllers\Cuti\CutiTahunanController;
+use App\Http\Controllers\Cuti\CutiLockController;
+use App\Http\Controllers\IjinKhusus\IjinKhususController;
+use App\Http\Controllers\IjinKhusus\JenisIjinKhususController;
 
 // ─── Redirect root ──────────────────────────────────────────────────────────────
 Route::get('/', fn() => redirect()->route('dashboard'));
@@ -92,6 +96,27 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/{ijin}/tolak-atasan',       [IjinController::class, 'tolakAtasan'])->name('tolak.atasan');
         Route::post('/{ijin}/approve-hrd',        [IjinController::class, 'approveHrd'])->name('approve.hrd');
         Route::post('/{ijin}/tolak-hrd',          [IjinController::class, 'tolakHrd'])->name('tolak.hrd');
+    });
+
+    // ── Cuti Tahunan (baru) ────────────────────────────────────────────────────
+    Route::prefix('cuti-tahunan')->name('cuti.tahunan.')->middleware('feature:cuti')->group(function () {
+        Route::get('/',               [CutiTahunanController::class, 'index'])->name('index');
+        Route::get('/buat',           [CutiTahunanController::class, 'create'])->name('create');
+        Route::post('/',              [CutiTahunanController::class, 'store'])->name('store');
+        Route::post('/request-buka',  [CutiTahunanController::class, 'requestBuka'])->name('request-buka');
+    });
+
+    // ── Ijin Khusus (baru, dinamis) ────────────────────────────────────────────
+    Route::prefix('ijin-khusus')->name('ijin-khusus.')->middleware('feature:cuti')->group(function () {
+        Route::get('/',                          [IjinKhususController::class, 'index'])->name('index');
+        Route::get('/buat',                      [IjinKhususController::class, 'create'])->name('create');
+        Route::post('/',                         [IjinKhususController::class, 'store'])->name('store');
+        Route::get('/{ijinKhusus}',              [IjinKhususController::class, 'show'])->name('show');
+        Route::post('/{ijinKhusus}/approve-atasan', [IjinKhususController::class, 'approveAtasan'])->name('approve.atasan');
+        Route::post('/{ijinKhusus}/tolak-atasan',   [IjinKhususController::class, 'tolakAtasan'])->name('tolak.atasan');
+        Route::post('/{ijinKhusus}/approve-hrd',    [IjinKhususController::class, 'approveHrd'])->name('approve.hrd');
+        Route::post('/{ijinKhusus}/tolak-hrd',      [IjinKhususController::class, 'tolakHrd'])->name('tolak.hrd');
+        Route::get('/{ijinKhusus}/download',        [IjinKhususController::class, 'downloadLampiran'])->name('download');
     });
 
     // ── Cuti — semua role (karyawan submit, atasan/hrd approve; controller filter) ─
@@ -161,6 +186,24 @@ Route::middleware(['auth'])->group(function () {
 // Master Karyawan, Absensi, Shift, Payroll, Kinerja, Rekrutmen, Training IHT
 // ═══════════════════════════════════════════════════════════════════════════════
 Route::middleware(['auth', 'role:hrd,admin'])->group(function () {
+
+    // ── Cuti Lock & Setting (HRD/Admin) ──────────────────────────────────────
+    Route::prefix('cuti-lock')->name('cuti.lock.')->middleware('feature:cuti')->group(function () {
+        Route::get('/',                                       [CutiLockController::class, 'index'])->name('index');
+        Route::post('/kunci',                                 [CutiLockController::class, 'kunci'])->name('kunci');
+        Route::post('/buka',                                  [CutiLockController::class, 'buka'])->name('buka');
+        Route::post('/setting',                               [CutiLockController::class, 'updateSetting'])->name('setting');
+        Route::post('/unlock/{cutiUnlockRequest}/setujui',    [CutiLockController::class, 'setujuiRequest'])->name('setujui');
+        Route::post('/unlock/{cutiUnlockRequest}/tolak',      [CutiLockController::class, 'tolakRequest'])->name('tolak');
+    });
+
+    // ── Master Jenis Ijin Khusus (HRD/Admin) ─────────────────────────────────
+    Route::prefix('ijin-khusus/master')->name('ijin-khusus.master.')->middleware('feature:cuti')->group(function () {
+        Route::get('/',                              [JenisIjinKhususController::class, 'index'])->name('index');
+        Route::post('/',                             [JenisIjinKhususController::class, 'store'])->name('store');
+        Route::put('/{jenisIjinKhusus}',             [JenisIjinKhususController::class, 'update'])->name('update');
+        Route::patch('/{jenisIjinKhusus}/toggle',    [JenisIjinKhususController::class, 'toggle'])->name('toggle');
+    });
 
     // ── Master Karyawan ────────────────────────────────────────────────────────
     Route::prefix('karyawan')->name('karyawan.')->group(function () {

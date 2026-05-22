@@ -225,7 +225,7 @@
 {{-- ═══════════════════════════════ KARYAWAN ════════════════════════════════ --}}
 @if($role === 'karyawan')
     {!! navLink('Portal Karyawan', 'ess.dashboard', 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z') !!}
-    @php $cutiIjinActive = request()->routeIs('cuti.*') || request()->routeIs('ijin.*'); @endphp
+    @php $cutiIjinActive = request()->routeIs('cuti.*') || request()->routeIs('ijin.*') || request()->routeIs('cuti.tahunan.*') || request()->routeIs('ijin-khusus.*'); @endphp
     <div x-data="{ open: {{ $cutiIjinActive ? 'true' : 'false' }} }">
         @if(!config('features.cuti', true))
         <button @click="featureModal = true"
@@ -249,7 +249,7 @@
             </svg>
         </button>
         <div x-show="open && sidebarOpen" x-cloak class="ml-4 mt-0.5 space-y-0.5">
-            @foreach([['Pengajuan Cuti','cuti.index','cuti.*'],['Ijin Sakit','ijin.index','ijin.*'],['Ijin Terlambat','ijin.index',''],['Ijin Pulang Duluan','ijin.index','']] as $i => [$lbl,$rt,$match])
+            @foreach([['Cuti Tahunan','cuti.tahunan.index','cuti.tahunan.*'],['Ijin Khusus','ijin-khusus.index','ijin-khusus.*'],['Ijin Sakit','ijin.index','ijin.*']] as $i => [$lbl,$rt,$match])
             @php
                 $params = match($i) { 0 => [], 1 => ['jenis'=>'sakit'], 2 => ['jenis'=>'terlambat'], 3 => ['jenis'=>'pulang_duluan'] };
                 $sa = $i === 0 ? request()->routeIs('cuti.*') : (request()->routeIs('ijin.*') && request()->route('jenis') === ($params['jenis'] ?? ''));
@@ -289,7 +289,7 @@
 @if($role === 'atasan')
     {!! navLink('Dashboard', 'dashboard', 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6') !!}
     {!! navLink('ESS (Portal Saya)', 'ess.dashboard', 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z') !!}
-    @php $cutiIjinActiveA = request()->routeIs('cuti.*') || request()->routeIs('ijin.*'); @endphp
+    @php $cutiIjinActiveA = request()->routeIs('cuti.*') || request()->routeIs('ijin.*') || request()->routeIs('cuti.tahunan.*') || request()->routeIs('ijin-khusus.*'); @endphp
     <div x-data="{ open: {{ $cutiIjinActiveA ? 'true' : 'false' }} }">
         <button @click="{{ !config('features.cuti', true) ? 'featureModal = true' : 'open = !open' }}"
                 class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition {{ $cutiIjinActiveA ? 'bg-blue-500/30 text-white' : 'text-blue-200 hover:bg-blue-800/50 hover:text-white' }} {{ !config('features.cuti',true) ? 'opacity-60' : '' }}">
@@ -309,11 +309,8 @@
         </button>
         @if(config('features.cuti', true))
         <div x-show="open && sidebarOpen" x-cloak class="ml-4 mt-0.5 space-y-0.5">
-            @foreach([['Pengajuan Cuti','cuti.index'],['Ijin Sakit','ijin.index'],['Ijin Terlambat','ijin.index'],['Ijin Pulang Duluan','ijin.index']] as $i => [$lbl,$rt])
-            @php
-                $params = match($i) { 0 => [], 1 => ['jenis'=>'sakit'], 2 => ['jenis'=>'terlambat'], 3 => ['jenis'=>'pulang_duluan'] };
-                $sa = $i === 0 ? request()->routeIs('cuti.*') : (request()->routeIs('ijin.*') && request()->route('jenis') === ($params['jenis'] ?? ''));
-            @endphp
+            @foreach([['Cuti Tahunan','cuti.tahunan.index',[]],['Ijin Khusus','ijin-khusus.index',[]],['Ijin Sakit','ijin.index',['jenis'=>'sakit']]] as [$lbl,$rt,$params])
+            @php $sa = request()->routeIs(str_replace('.index','',$rt).'*'); @endphp
             <a href="{{ route($rt, $params) }}"
                class="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium transition
                       {{ $sa ? 'bg-blue-500/20 text-white' : 'text-blue-300 hover:bg-blue-800/40 hover:text-white' }}">
@@ -393,7 +390,7 @@
     {!! navLink('Dashboard', 'dashboard', 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6') !!}
     {!! navLink('Master Karyawan', 'karyawan.index', 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z') !!}
     {!! navLink('Absensi', 'absensi.index', 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z') !!}
-    @php $cutiIjinActiveH = request()->routeIs('cuti.*') || request()->routeIs('ijin.*'); @endphp
+    @php $cutiIjinActiveH = request()->routeIs('cuti.*') || request()->routeIs('ijin.*') || request()->routeIs('cuti.tahunan.*') || request()->routeIs('ijin-khusus.*'); @endphp
     <div x-data="{ open: {{ $cutiIjinActiveH ? 'true' : 'false' }} }">
         <button @click="{{ !config('features.cuti', true) ? 'featureModal = true' : 'open = !open' }}"
                 class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition {{ $cutiIjinActiveH ? 'bg-blue-500/30 text-white' : 'text-blue-200 hover:bg-blue-800/50 hover:text-white' }} {{ !config('features.cuti',true) ? 'opacity-60' : '' }}">
@@ -413,11 +410,15 @@
         </button>
         @if(config('features.cuti', true))
         <div x-show="open && sidebarOpen" x-cloak class="ml-4 mt-0.5 space-y-0.5">
-            @foreach([['Pengajuan Cuti','cuti.index'],['Ijin Sakit','ijin.index'],['Ijin Terlambat','ijin.index'],['Ijin Pulang Duluan','ijin.index']] as $i => [$lbl,$rt])
-            @php
-                $params = match($i) { 0 => [], 1 => ['jenis'=>'sakit'], 2 => ['jenis'=>'terlambat'], 3 => ['jenis'=>'pulang_duluan'] };
-                $sa = $i === 0 ? request()->routeIs('cuti.*') : (request()->routeIs('ijin.*') && request()->route('jenis') === ($params['jenis'] ?? ''));
-            @endphp
+            @foreach([
+                ['Cuti Tahunan',  'cuti.tahunan.index',    [], 'cuti.tahunan.*'],
+                ['Ijin Khusus',   'ijin-khusus.index',     [], 'ijin-khusus.*'],
+                ['Ijin Sakit',    'ijin.index', ['jenis'=>'sakit'], 'ijin.*'],
+                ['Rekap Cuti',    'cuti.rekap',            [], 'cuti.rekap'],
+                ['Lock Cuti',     'cuti.lock.index',       [], 'cuti.lock.*'],
+                ['Master Jenis Ijin','ijin-khusus.master.index',[],'ijin-khusus.master.*'],
+            ] as [$lbl,$rt,$params,$match])
+            @php $sa = request()->routeIs($match); @endphp
             <a href="{{ route($rt, $params) }}"
                class="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium transition
                       {{ $sa ? 'bg-blue-500/20 text-white' : 'text-blue-300 hover:bg-blue-800/40 hover:text-white' }}">

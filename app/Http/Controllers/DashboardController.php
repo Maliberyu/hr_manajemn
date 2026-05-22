@@ -14,6 +14,10 @@ use App\Models\AtasanPegawai;
 use App\Models\PengajuanIjin;
 use App\Models\TarifLembur;
 use App\Models\HrNotification;
+use App\Models\CutiLock;
+use App\Models\CutiSetting;
+use App\Models\CutiUnlockRequest;
+use App\Models\IjinKhusus;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -291,11 +295,28 @@ class DashboardController extends Controller
             0
         );
 
-        // Riwayat Ijin (3 terbaru per jenis)
+        // Riwayat Ijin Sakit (old model, keep for archive)
         $ijinSaya = $this->safe(
             fn() => PengajuanIjin::where('nik', $pegawai->nik)
-                ->orderByDesc('tanggal')->limit(15)->get(),
+                ->where('jenis', 'sakit')
+                ->orderByDesc('tanggal')->limit(10)->get(),
             collect()
+        );
+
+        // Riwayat Ijin Khusus (new model)
+        $ijinKhususSaya = $this->safe(
+            fn() => IjinKhusus::with('jenis')
+                ->where('nik', $pegawai->nik)
+                ->orderByDesc('tanggal_mulai')->limit(10)->get(),
+            collect()
+        );
+
+        // Lock status cuti tahunan
+        $lock          = $this->safe(fn() => CutiLock::status(), new CutiLock(['is_locked' => false]));
+        $setting       = $this->safe(fn() => CutiSetting::get(), new CutiSetting(['min_hari_pengajuan' => 3]));
+        $unlockReqSaya = $this->safe(
+            fn() => CutiUnlockRequest::where('user_id', auth()->id())->latest()->first(),
+            null
         );
 
         // Riwayat Lembur
@@ -323,7 +344,8 @@ class DashboardController extends Controller
         return view('ess.dashboard', compact(
             'pegawai', 'absensiHariIni', 'cutiSaya', 'sisaCuti', 'pegawaiPj',
             'trainingIHT', 'trainingEksternal', 'expiringSoon', 'slipGaji',
-            'ijinSaya', 'lemburSaya', 'tarifLembur'
+            'ijinSaya', 'ijinKhususSaya', 'lemburSaya', 'tarifLembur',
+            'lock', 'setting', 'unlockReqSaya'
         ));
     }
 
