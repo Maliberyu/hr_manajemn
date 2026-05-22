@@ -154,6 +154,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/{lembur}/tolak-hrd',           [LemburController::class, 'tolakHrd'])->name('tolak.hrd');
         Route::post('/{lembur}/konfirmasi-draft',    [LemburController::class, 'konfirmasiDraft'])->name('konfirmasi-draft');
         Route::delete('/{lembur}/batalkan-draft',    [LemburController::class, 'batalkanDraft'])->name('batalkan-draft');
+        Route::post('/{lembur}/sync-payroll',        [LemburController::class, 'syncPayroll'])->name('sync-payroll');
     });
 
     // ── Training Eksternal — semua role (controller filter per role) ───────────

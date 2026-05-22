@@ -11,6 +11,8 @@ use App\Models\AtasanPegawai;
 use App\Models\User;
 use App\Models\TarifLembur;
 use App\Models\HrNotification;
+use App\Models\SlipGaji;
+use App\Models\SlipKomponen;
 use App\Services\LemburKalkulasiService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -316,11 +318,18 @@ class LemburController extends Controller
             'catatan_hrd'     => $request->catatan_hrd,
         ]);
 
+        // Masukkan otomatis ke slip gaji bulan yang bersangkutan
+        $masukPayroll = $this->masukkanKePayroll($lembur);
+
         HrNotification::kirimKePegawai($lembur->pegawai?->nik ?? '', 'lembur_approved',
             'Lembur Disetujui', "Lembur Anda disetujui HRD. Nominal: Rp " . number_format($lembur->nominal, 0, ',', '.'),
             route('lembur.show', $lembur));
 
-        return back()->with('success', "Lembur disetujui HRD.");
+        $pesan = $masukPayroll
+            ? "Lembur disetujui HRD. Nominal Rp " . number_format($lembur->nominal, 0, ',', '.') . " sudah masuk ke slip gaji."
+            : "Lembur disetujui HRD. Nominal tidak otomatis masuk ke slip (nominal 0 atau slip tidak ditemukan).";
+
+        return back()->with('success', $pesan);
     }
 
     // ─── Tolak HRD ────────────────────────────────────────────────────────────
@@ -338,6 +347,95 @@ class LemburController extends Controller
         ]);
 
         return back()->with('success', "Pengajuan lembur ditolak.");
+    }
+
+    // ─── Sync manual ke payroll (untuk lembur lama yang belum masuk) ─────────
+
+    public function syncPayroll(Lembur $lembur)
+    {
+        abort_unless($lembur->status === 'Disetujui', 422, 'Hanya lembur yang sudah disetujui.');
+        abort_unless(auth()->user()->hasRole(['hrd','admin']), 403);
+
+        $ok = $this->masukkanKePayroll($lembur);
+
+        return back()->with(
+            $ok ? 'success' : 'error',
+            $ok
+                ? "Lembur Rp " . number_format($lembur->nominal, 0, ',', '.') . " berhasil dimasukkan ke slip gaji."
+                : "Gagal memasukkan ke slip gaji. Cek log untuk detail."
+        );
+    }
+
+    // ─── Inject lembur ke slip gaji ──────────────────────────────────────────
+
+    private function masukkanKePayroll(Lembur $lembur): bool
+    {
+        try {
+            if (!$lembur->nominal || $lembur->nominal <= 0) return false;
+            if (!$lembur->pegawai_id) return false;
+
+            $bulan  = (int) Carbon::parse($lembur->tanggal)->format('m');
+            $tahun  = (int) Carbon::parse($lembur->tanggal)->format('Y');
+            $sumber = 'lb:' . $lembur->id;   // max 20 char sesuai kolom varchar(20)
+
+            $peg = $lembur->pegawai ?? \App\Models\Pegawai::find($lembur->pegawai_id);
+            if (!$peg) return false;
+
+            // Cari slip bulan tersebut, atau buat baru
+            $slip = SlipGaji::where('pegawai_id', $lembur->pegawai_id)
+                ->where('bulan', $bulan)
+                ->where('tahun', $tahun)
+                ->first();
+
+            if (!$slip) {
+                $gapok = (float) ($peg->gapok ?? 0);
+                $slip  = SlipGaji::create([
+                    'nik'             => $peg->nik,
+                    'pegawai_id'      => $lembur->pegawai_id,
+                    'bulan'           => $bulan,
+                    'tahun'           => $tahun,
+                    'status'          => 'draft',
+                    'gaji_pokok'      => $gapok,
+                    'total_tunjangan' => 0,
+                    'total_potongan'  => 0,
+                    'gaji_bersih'     => $gapok,
+                    'generated_by'    => auth()->id(),
+                    'generated_at'    => now(),
+                ]);
+            }
+
+            // Nama komponen: "Lembur 4j ×1.5 @ Rp 25.000/jam (15 Jan)"
+            $durasiLabel  = Lembur::formatDurasi($lembur->durasi_jam);
+            $upahPerJam   = $lembur->upah_per_jam ?? 0;
+            $multiplier   = $lembur->multiplier   ?? 1.0;
+            $tglFmt       = Carbon::parse($lembur->tanggal)->translatedFormat('d M');
+            $tarifFmt     = 'Rp ' . number_format($upahPerJam, 0, ',', '.');
+
+            $namaKomponen = "Lembur {$durasiLabel}"
+                . ($multiplier != 1.0 ? " ×{$multiplier}" : '')
+                . " @ {$tarifFmt}/jam ({$tglFmt})";
+
+            // Upsert — satu komponen per lembur ID, tidak duplikat
+            SlipKomponen::updateOrCreate(
+                ['slip_id' => $slip->id, 'sumber' => $sumber],
+                [
+                    'nama'   => $namaKomponen,
+                    'jenis'  => 'tambah',
+                    'nilai'  => $lembur->nominal,
+                    'urutan' => 90,
+                ]
+            );
+
+            // Recalculate total slip
+            $slip->load('komponenSlip');
+            $slip->recalculate();
+
+            return true;
+
+        } catch (\Throwable $e) {
+            \Log::warning("masukkanKePayroll gagal untuk lembur #{$lembur->id}: " . $e->getMessage());
+            return false;
+        }
     }
 
     // ─── Rekap ────────────────────────────────────────────────────────────────

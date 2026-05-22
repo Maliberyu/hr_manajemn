@@ -340,6 +340,39 @@
     </div>
     @endif
 
+    {{-- Tombol sync ke payroll manual (HRD, jika lembur disetujui) --}}
+    @if($lembur->status === 'Disetujui' && auth()->user()->hasRole(['hrd','admin']))
+    @php
+        $bulanLembur = \Carbon\Carbon::parse($lembur->tanggal)->month;
+        $tahunLembur = \Carbon\Carbon::parse($lembur->tanggal)->year;
+        $sudahDiSlip = \App\Models\SlipKomponen::where('sumber', 'lb:' . $lembur->id)->exists();
+    @endphp
+    @if(!$sudahDiSlip)
+    <div class="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-center justify-between gap-4">
+        <div>
+            <p class="text-sm font-semibold text-amber-800">Belum masuk ke slip gaji</p>
+            <p class="text-xs text-amber-700 mt-0.5">
+                Nominal Rp {{ number_format($lembur->nominal ?? 0, 0, ',', '.') }}
+                belum ditambahkan ke slip {{ \Carbon\Carbon::create($tahunLembur, $bulanLembur)->translatedFormat('F Y') }}.
+            </p>
+        </div>
+        <form action="{{ route('lembur.sync-payroll', $lembur) }}" method="POST">
+            @csrf
+            <button type="submit"
+                    class="flex items-center gap-2 px-4 py-2 text-sm bg-amber-600 text-white rounded-xl hover:bg-amber-700 font-semibold transition whitespace-nowrap">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                Masukkan ke Payroll
+            </button>
+        </form>
+    </div>
+    @else
+    <div class="flex items-center gap-2 px-3 py-2 bg-green-50 border border-green-100 rounded-xl text-xs text-green-700">
+        <svg class="w-3.5 h-3.5 text-green-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+        Sudah masuk ke slip gaji {{ \Carbon\Carbon::create($tahunLembur, $bulanLembur)->translatedFormat('F Y') }}
+    </div>
+    @endif
+    @endif
+
     <a href="{{ route('lembur.index') }}"
        class="inline-block text-sm text-gray-500 hover:text-gray-700 transition">
         ← Kembali ke Daftar Lembur
