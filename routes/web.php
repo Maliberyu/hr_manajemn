@@ -35,6 +35,10 @@ use App\Http\Controllers\Cuti\CutiTahunanController;
 use App\Http\Controllers\Cuti\CutiLockController;
 use App\Http\Controllers\IjinKhusus\IjinKhususController;
 use App\Http\Controllers\IjinKhusus\JenisIjinKhususController;
+use App\Http\Controllers\Shift\ShiftMasterController;
+use App\Http\Controllers\Shift\TukarShiftController;
+use App\Http\Controllers\Shift\DoubleShiftController;
+use App\Http\Controllers\Shift\JadwalRealisasiController;
 
 // ─── Redirect root ──────────────────────────────────────────────────────────────
 Route::get('/', fn() => redirect()->route('dashboard'));
@@ -179,6 +183,34 @@ Route::middleware(['auth'])->group(function () {
             Route::post('/{rekrutmenRequest}/tolak',    [RekrutmenRequestController::class, 'tolak'])->name('tolak');
         });
     });
+
+    // ── Realisasi Jadwal (semua role) ─────────────────────────────────────────
+    Route::prefix('shift/realisasi')->name('shift.realisasi.')->middleware('feature:shift')->group(function () {
+        Route::get('/', [JadwalRealisasiController::class, 'index'])->name('index');
+    });
+
+    // ── Tukar Shift (semua role) ──────────────────────────────────────────────
+    Route::prefix('tukar-shift')->name('tukar-shift.')->middleware('feature:shift')->group(function () {
+        Route::get('/',                              [TukarShiftController::class, 'index'])->name('index');
+        Route::get('/buat',                          [TukarShiftController::class, 'create'])->name('create');
+        Route::post('/',                             [TukarShiftController::class, 'store'])->name('store');
+        Route::get('/{tukarShift}',                  [TukarShiftController::class, 'show'])->name('show');
+        Route::post('/{tukarShift}/approve-rekan',   [TukarShiftController::class, 'approveRekan'])->name('approve.rekan');
+        Route::post('/{tukarShift}/tolak-rekan',     [TukarShiftController::class, 'tolakRekan'])->name('tolak.rekan');
+        Route::post('/{tukarShift}/approve-atasan',  [TukarShiftController::class, 'approveAtasan'])->name('approve.atasan');
+        Route::post('/{tukarShift}/tolak-atasan',    [TukarShiftController::class, 'tolakAtasan'])->name('tolak.atasan');
+    });
+
+    // ── Double Shift (semua role) ─────────────────────────────────────────────
+    Route::prefix('double-shift')->name('double-shift.')->middleware('feature:shift')->group(function () {
+        Route::get('/',                          [DoubleShiftController::class, 'index'])->name('index');
+        Route::get('/buat',                      [DoubleShiftController::class, 'create'])->name('create');
+        Route::post('/',                         [DoubleShiftController::class, 'store'])->name('store');
+        Route::get('/{doubleShift}',             [DoubleShiftController::class, 'show'])->name('show');
+        Route::post('/{doubleShift}/approve',    [DoubleShiftController::class, 'approveAtasan'])->name('approve');
+        Route::post('/{doubleShift}/tolak',      [DoubleShiftController::class, 'tolakAtasan'])->name('tolak');
+    });
+
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -195,6 +227,29 @@ Route::middleware(['auth', 'role:hrd,admin'])->group(function () {
         Route::post('/setting',                               [CutiLockController::class, 'updateSetting'])->name('setting');
         Route::post('/unlock/{cutiUnlockRequest}/setujui',    [CutiLockController::class, 'setujuiRequest'])->name('setujui');
         Route::post('/unlock/{cutiUnlockRequest}/tolak',      [CutiLockController::class, 'tolakRequest'])->name('tolak');
+    });
+
+    // ── Print Jadwal Rencana ──────────────────────────────────────────────────
+    Route::get('shift/rencana/print', function (\Illuminate\Http\Request $request) {
+        $bulan  = (int) ($request->bulan ?? now()->month);
+        $tahun  = (int) ($request->tahun ?? now()->year);
+        $depId  = $request->departemen;
+        $pegawai = \App\Models\Pegawai::aktif()
+            ->when($depId, fn($q) => $q->departemen($depId))
+            ->with(['jadwalBulanan' => fn($q) => $q->where('tahun', $tahun)->where('bulan', $bulan)])
+            ->orderBy('nama')->get();
+        $departemen = \App\Models\Departemen::orderBy('nama')->pluck('nama', 'dep_id');
+        $jumlahHari = \Carbon\Carbon::create($tahun, $bulan)->daysInMonth;
+        return view('shift.rencana.print', compact('pegawai','departemen','bulan','tahun','jumlahHari','depId'));
+    })->name('shift.rencana.print')->middleware('feature:shift');
+
+    // ── Master Shift (HRD/Admin) ──────────────────────────────────────────────
+    Route::prefix('shift/master')->name('shift.master.')->middleware('feature:shift')->group(function () {
+        Route::get('/',                           [ShiftMasterController::class, 'index'])->name('index');
+        Route::post('/',                          [ShiftMasterController::class, 'store'])->name('store');
+        Route::put('/{shiftMaster}',              [ShiftMasterController::class, 'update'])->name('update');
+        Route::patch('/{shiftMaster}/toggle',     [ShiftMasterController::class, 'toggle'])->name('toggle');
+        Route::post('/setting',                   [ShiftMasterController::class, 'updateSetting'])->name('setting');
     });
 
     // ── Master Jenis Ijin Khusus (HRD/Admin) ─────────────────────────────────
@@ -241,7 +296,7 @@ Route::middleware(['auth', 'role:hrd,admin'])->group(function () {
         });
     });
 
-    // ── Shift Kerja ────────────────────────────────────────────────────────────
+    // ── Shift Kerja (Jadwal Rencana) ──────────────────────────────────────────
     Route::prefix('shift')->name('shift.')->middleware('feature:shift')->group(function () {
         Route::get('/',                           [ShiftController::class, 'index'])->name('index');
         Route::get('/karyawan/{karyawan}/edit',   [ShiftController::class, 'edit'])->name('edit');

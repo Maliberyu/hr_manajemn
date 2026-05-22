@@ -11,6 +11,8 @@ use App\Models\JadwalPegawai;
 use App\Models\Departemen;
 use App\Models\AtasanPegawai;
 use App\Models\User;
+use App\Models\Lembur;
+use App\Models\ShiftMaster;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -247,18 +249,32 @@ class AbsensiController extends Controller
             "absensi/foto/" . now()->format('Ym') . "/{$pegawai->id}_keluar_" . now()->format('His') . ".jpg"
         );
 
+        $jamKeluar = now();
+
         $absensi->update([
-            'jam_keluar'  => now(),
+            'jam_keluar'  => $jamKeluar,
             'lat_keluar'  => $request->lat,
             'lng_keluar'  => $request->lng,
             'foto_keluar' => $fotoPath,
         ]);
 
-        return response()->json([
+        // ── Auto-create draft lembur jika jam keluar > jam selesai shift ───────
+        $draftLembur = $this->buatDraftLemburJikaOvertime($pegawai, $absensi->fresh(), $jamKeluar);
+
+        $response = [
             'message'    => 'Check-out berhasil.',
-            'jam_keluar' => now()->format('H:i'),
+            'jam_keluar' => $jamKeluar->format('H:i'),
             'durasi'     => $absensi->fresh()->durasi_kerja,
-        ]);
+        ];
+
+        if ($draftLembur) {
+            $response['lembur_draft'] = true;
+            $response['lembur_menit'] = $draftLembur->durasi_jam * 60;
+            $response['lembur_label'] = $draftLembur->durasi_label;
+            $response['message'] .= ' Terdeteksi lembur ' . $draftLembur->durasi_label . '. Draft lembur dibuat — silakan konfirmasi.';
+        }
+
+        return response()->json($response);
     }
 
     // ─── Detail absensi satu pegawai ─────────────────────────────────────────
@@ -491,5 +507,69 @@ class AbsensiController extends Controller
         $selisih = $masuk->diffInMinutes($batasWaktu, false) * -1;
 
         return max(0, $selisih - 10);
+    }
+
+    /**
+     * Buat draft lembur otomatis jika jam keluar > jam selesai shift (Opsi B).
+     * Minimum 30 menit overtime agar draft dibuat.
+     */
+    private function buatDraftLemburJikaOvertime(Pegawai $pegawai, Absensi $absensi, Carbon $jamKeluar): ?Lembur
+    {
+        try {
+            $tanggal  = Carbon::parse($absensi->tanggal);
+            $hariKe   = (int) $tanggal->format('j');
+
+            // Ambil jadwal rencana
+            $jadwal = JadwalPegawai::where('id', $pegawai->id)
+                ->where('tahun', $tanggal->year)
+                ->where('bulan', $tanggal->month)
+                ->first();
+
+            $namaShift = $jadwal?->getHari($hariKe) ?? '';
+            if (!$namaShift) return null;
+
+            // Cari shift master dari nama
+            $shiftMaster = ShiftMaster::dariNamaJadwal($namaShift);
+            if (!$shiftMaster || !$shiftMaster->jam_selesai) return null;
+
+            // Jam selesai shift
+            $selesaiShift = Carbon::parse($tanggal->format('Y-m-d') . ' ' . substr($shiftMaster->jam_selesai, 0, 5));
+
+            // Untuk shift malam (melewati tengah malam), tambah 1 hari ke jam_selesai
+            if ($shiftMaster->melewati_tengah_malam && $selesaiShift->lt($jamKeluar->copy()->startOfDay())) {
+                $selesaiShift->addDay();
+            }
+
+            $ovtMenit = $jamKeluar->diffInMinutes($selesaiShift, false) * -1;
+
+            // Minimum 30 menit untuk buat draft
+            if ($ovtMenit < 30) return null;
+
+            // Jangan buat duplikat draft pada hari yang sama
+            $existing = Lembur::where('pegawai_id', $pegawai->id)
+                ->whereDate('tanggal', $tanggal)
+                ->where('status', 'Draft')
+                ->first();
+            if ($existing) return $existing;
+
+            $ovtJam = round($ovtMenit / 60, 2);
+
+            return Lembur::create([
+                'pegawai_id'   => $pegawai->id,
+                'tanggal'      => $tanggal->format('Y-m-d'),
+                'jam_mulai'    => $selesaiShift->format('H:i'),
+                'jam_selesai'  => $jamKeluar->format('H:i'),
+                'durasi_jam'   => $ovtJam,
+                'jenis'        => 'HB',
+                'keterangan'   => "Draft lembur otomatis — shift {$shiftMaster->nama} selesai {$shiftMaster->jam_label}",
+                'status'       => 'Draft',
+                'sumber_draft' => 'absensi_auto',
+                'nominal'      => null,
+            ]);
+        } catch (\Throwable $e) {
+            // Jangan crash checkout karena error lembur
+            \Log::warning('Auto-draft lembur gagal: ' . $e->getMessage());
+            return null;
+        }
     }
 }

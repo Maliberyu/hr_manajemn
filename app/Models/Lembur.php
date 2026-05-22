@@ -28,6 +28,7 @@ class Lembur extends Model
         'catatan_hrd',
         'approved_hrd_by',
         'approved_hrd_at',
+        'sumber_draft',
     ];
 
     protected $casts = [
@@ -39,6 +40,7 @@ class Lembur extends Model
     ];
 
     const STATUS = [
+        'Draft',
         'Menunggu Atasan',
         'Menunggu HRD',
         'Disetujui',

@@ -264,6 +264,9 @@
         @endif
     </div>
     {!! navLink('Lembur', 'lembur.index', 'M13 10V3L4 14h7v7l9-11h-7z', 0, 'lembur') !!}
+    {!! navLink('Tukar Shift', 'tukar-shift.index', 'M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4', 0, 'tukar-shift') !!}
+    {!! navLink('Double Shift', 'double-shift.index', 'M13 10V3L4 14h7v7l9-11h-7z', 0, 'double-shift') !!}
+    {!! navLink('Jadwal Saya', 'shift.realisasi.index', 'M4 6h16M4 10h16M4 14h16M4 18h16', 0, 'shift.realisasi') !!}
     {!! navLink('Training Eksternal', 'training.eksternal.index', $trainingIcon, 0, 'training') !!}
     @php
         $slipKaryawan = 0;
@@ -383,6 +386,10 @@
         <span x-show="sidebarOpen" x-transition class="whitespace-nowrap flex-1">Slip Gaji Saya</span>
         {!! $badgeA !!}
     </a>
+    {!! navLink('Lembur', 'lembur.index', 'M13 10V3L4 14h7v7l9-11h-7z', 0, 'lembur') !!}
+    {!! navLink('Tukar Shift', 'tukar-shift.index', 'M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4', 0, 'tukar-shift') !!}
+    {!! navLink('Double Shift', 'double-shift.index', 'M13 10V3L4 14h7v7l9-11h-7z', 0, 'double-shift') !!}
+    {!! navLink('Jadwal Saya', 'shift.realisasi.index', 'M4 6h16M4 10h16M4 14h16M4 18h16', 0, 'shift.realisasi') !!}
 @endif
 
 {{-- ═══════════════════════════════ HRD & ADMIN ════════════════════════════ --}}
@@ -428,7 +435,48 @@
         </div>
         @endif
     </div>
-    {!! navLink('Shift Kerja', 'shift.index', 'M4 6h16M4 10h16M4 14h16M4 18h16', 0, 'shift') !!}
+    {{-- Shift: dropdown Jadwal Rencana, Tukar Shift, Double Shift, Master Shift --}}
+    @php
+        $shiftActive = request()->routeIs('shift.*','tukar-shift.*','double-shift.*');
+        $badgeTukar  = 0;
+        try {
+            $badgeTukar = \App\Models\TukarShift::where('status','menunggu_atasan')->count()
+                        + \App\Models\DoubleShift::where('status','menunggu_atasan')->count();
+        } catch(\Throwable $e) {}
+    @endphp
+    <div x-data="{ open: {{ $shiftActive ? 'true' : 'false' }} }">
+        <button @click="open = !open"
+                class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition group
+                       {{ $shiftActive ? 'bg-blue-500/30 text-white' : 'text-blue-200 hover:bg-blue-800/50 hover:text-white' }}">
+            <svg class="w-5 h-5 flex-shrink-0 {{ $shiftActive ? 'text-blue-300' : 'text-blue-400 group-hover:text-blue-200' }}"
+                 fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M4 6h16M4 10h16M4 14h16M4 18h16"/>
+            </svg>
+            <span class="flex-1 text-left">Shift Kerja</span>
+            @if($badgeTukar > 0)
+            <span class="flex items-center justify-center w-5 h-5 text-xs font-bold bg-yellow-400 text-yellow-900 rounded-full">{{ $badgeTukar }}</span>
+            @endif
+            <svg class="w-4 h-4 text-blue-400 transition-transform" :class="open ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+            </svg>
+        </button>
+        <div x-show="open" x-cloak class="mt-1 ml-8 space-y-0.5">
+            @foreach([
+                ['Jadwal Rencana',   'shift.index',           [], 'shift.index'],
+                ['Realisasi Jadwal', 'shift.realisasi.index', [], 'shift.realisasi.*'],
+                ['Tukar Shift',      'tukar-shift.index',     [], 'tukar-shift.*'],
+                ['Double Shift',     'double-shift.index',    [], 'double-shift.*'],
+                ['Master Shift',     'shift.master.index',    [], 'shift.master.*'],
+            ] as [$lbl,$rt,$params,$match])
+            @php $sa = request()->routeIs($match); @endphp
+            <a href="{{ route($rt, $params) }}"
+               class="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium transition
+                      {{ $sa ? 'bg-blue-500/20 text-white' : 'text-blue-300 hover:bg-blue-800/40 hover:text-white' }}">
+                <span class="w-1 h-1 rounded-full bg-current opacity-60 flex-shrink-0"></span>{{ $lbl }}
+            </a>
+            @endforeach
+        </div>
+    </div>
     {!! navLink('Lembur', 'lembur.index', 'M13 10V3L4 14h7v7l9-11h-7z', $badgeLembur, 'lembur') !!}
     {!! navLink('Payroll', 'payroll.index', 'M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z', 0, 'payroll') !!}
     {!! navLink('Penilaian Kinerja', 'kinerja.index', 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z', 0, 'kinerja') !!}
