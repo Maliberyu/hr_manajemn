@@ -140,17 +140,20 @@ Route::middleware(['auth'])->group(function () {
 
     // ── Lembur — semua role (karyawan submit; controller filter) ──────────────
     Route::prefix('lembur')->name('lembur.')->middleware('feature:lembur')->group(function () {
-        Route::get('/',                         [LemburController::class, 'index'])->name('index');
-        Route::get('/buat',                     [LemburController::class, 'create'])->name('create');
-        Route::post('/',                        [LemburController::class, 'store'])->name('store');
-        Route::get('/rekap',                    [LemburController::class, 'rekap'])->name('rekap');
-        Route::get('/setting',                  [LemburController::class, 'setting'])->name('setting');
-        Route::post('/setting',                 [LemburController::class, 'updateSetting'])->name('setting.update');
-        Route::get('/{lembur}',                 [LemburController::class, 'show'])->name('show');
-        Route::post('/{lembur}/approve-atasan', [LemburController::class, 'approveAtasan'])->name('approve.atasan');
-        Route::post('/{lembur}/tolak-atasan',   [LemburController::class, 'tolakAtasan'])->name('tolak.atasan');
-        Route::post('/{lembur}/approve-hrd',    [LemburController::class, 'approveHrd'])->name('approve.hrd');
-        Route::post('/{lembur}/tolak-hrd',      [LemburController::class, 'tolakHrd'])->name('tolak.hrd');
+        Route::get('/',                              [LemburController::class, 'index'])->name('index');
+        Route::get('/buat',                          [LemburController::class, 'create'])->name('create');
+        Route::post('/',                             [LemburController::class, 'store'])->name('store');
+        Route::get('/rekap',                         [LemburController::class, 'rekap'])->name('rekap');
+        Route::get('/setting',                       [LemburController::class, 'setting'])->name('setting');
+        Route::post('/setting',                      [LemburController::class, 'updateSetting'])->name('setting.update');
+        Route::get('/hitung-preview',                [LemburController::class, 'hitungPreview'])->name('hitung-preview');
+        Route::get('/{lembur}',                      [LemburController::class, 'show'])->name('show');
+        Route::post('/{lembur}/approve-atasan',      [LemburController::class, 'approveAtasan'])->name('approve.atasan');
+        Route::post('/{lembur}/tolak-atasan',        [LemburController::class, 'tolakAtasan'])->name('tolak.atasan');
+        Route::post('/{lembur}/approve-hrd',         [LemburController::class, 'approveHrd'])->name('approve.hrd');
+        Route::post('/{lembur}/tolak-hrd',           [LemburController::class, 'tolakHrd'])->name('tolak.hrd');
+        Route::post('/{lembur}/konfirmasi-draft',    [LemburController::class, 'konfirmasiDraft'])->name('konfirmasi-draft');
+        Route::delete('/{lembur}/batalkan-draft',    [LemburController::class, 'batalkanDraft'])->name('batalkan-draft');
     });
 
     // ── Training Eksternal — semua role (controller filter per role) ───────────

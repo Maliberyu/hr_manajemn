@@ -41,49 +41,111 @@
             </span>
         </div>
 
+        {{-- Status Draft: tombol konfirmasi / batalkan --}}
+        @if($lembur->status === 'Draft' && (auth()->user()->hasRole(['hrd','admin']) || $lembur->pegawai_id === auth()->user()->pegawai?->id))
+        <div class="mb-5 p-4 bg-gray-50 border border-dashed border-gray-300 rounded-xl">
+            <p class="text-sm font-semibold text-gray-700 mb-1">Draft Lembur</p>
+            <p class="text-xs text-gray-500 mb-3">Draft ini dibuat otomatis saat checkout. Konfirmasi untuk mengajukan ke atasan.</p>
+            <div class="flex gap-2">
+                <form action="{{ route('lembur.konfirmasi-draft', $lembur) }}" method="POST">
+                    @csrf
+                    <button type="submit" class="px-4 py-2 text-sm bg-orange-600 text-white rounded-xl hover:bg-orange-700 font-semibold">
+                        Konfirmasi & Ajukan
+                    </button>
+                </form>
+                <form action="{{ route('lembur.batalkan-draft', $lembur) }}" method="POST">
+                    @csrf @method('DELETE')
+                    <button type="submit" onclick="return confirm('Batalkan draft lembur ini?')"
+                            class="px-4 py-2 text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl hover:bg-red-100">
+                        Batalkan
+                    </button>
+                </form>
+            </div>
+        </div>
+        @endif
+
         <div class="grid grid-cols-2 gap-4 text-sm">
             <div>
                 <p class="text-xs text-gray-400">Tanggal</p>
-                <p class="font-medium text-gray-800">
-                    {{ $lembur->tanggal?->translatedFormat('l, d F Y') }}
-                </p>
+                <p class="font-medium text-gray-800">{{ $lembur->tanggal?->translatedFormat('l, d F Y') }}</p>
             </div>
             <div>
-                <p class="text-xs text-gray-400">Jenis Lembur</p>
+                <p class="text-xs text-gray-400">Jenis Hari</p>
                 <span class="inline-block px-2 py-0.5 rounded-lg text-xs font-semibold
                     {{ $lembur->jenis === 'HR' ? 'bg-orange-100 text-orange-700' : 'bg-blue-50 text-blue-600' }}">
-                    {{ $lembur->jenis }} — {{ \App\Models\Lembur::JENIS[$lembur->jenis] ?? $lembur->jenis }}
+                    {{ \App\Models\Lembur::JENIS[$lembur->jenis] ?? $lembur->jenis }}
                 </span>
             </div>
             <div>
-                <p class="text-xs text-gray-400">Waktu</p>
-                <p class="font-medium text-gray-800">
-                    {{ $lembur->jam_mulai }} – {{ $lembur->jam_selesai }}
-                </p>
+                <p class="text-xs text-gray-400">Waktu Kerja</p>
+                <p class="font-medium text-gray-800">{{ $lembur->jam_mulai }} – {{ $lembur->jam_selesai }}</p>
             </div>
             <div>
-                <p class="text-xs text-gray-400">Durasi</p>
-                <p class="font-semibold text-blue-600 text-base">{{ $lembur->durasi_label }}</p>
-            </div>
-            <div>
-                <p class="text-xs text-gray-400">Nominal Estimasi</p>
-                <p class="font-bold text-gray-800 text-lg">
-                    Rp {{ number_format($lembur->nominal ?? 0, 0, ',', '.') }}
+                <p class="text-xs text-gray-400">Durasi
+                    @if($lembur->durasi_aktual && $lembur->durasi_aktual > $lembur->durasi_jam)
+                    <span class="ml-1 text-orange-500">(dipotong)</span>
+                    @endif
                 </p>
-            </div>
-            <div>
-                <p class="text-xs text-gray-400">Diajukan</p>
-                <p class="font-medium text-gray-700">
-                    {{ $lembur->created_at?->translatedFormat('d F Y, H:i') }}
-                </p>
+                <p class="font-bold text-orange-600 text-base">{{ $lembur->durasi_label }}</p>
+                @if($lembur->durasi_aktual && $lembur->durasi_aktual > $lembur->durasi_jam)
+                <p class="text-xs text-gray-400">Aktual: {{ \App\Models\Lembur::formatDurasi($lembur->durasi_aktual) }}</p>
+                @endif
             </div>
             <div class="col-span-2">
                 <p class="text-xs text-gray-400 mb-1">Keterangan Pekerjaan</p>
-                <p class="text-gray-700 bg-gray-50 rounded-xl px-3 py-2">
+                <p class="text-gray-700 bg-gray-50 rounded-xl px-3 py-2 text-sm">
                     {{ $lembur->keterangan ?: $lembur->alasan ?: '-' }}
                 </p>
             </div>
         </div>
+
+        {{-- Breakdown Kalkulasi --}}
+        @if($lembur->metode)
+        <div class="mt-4 pt-4 border-t border-gray-100">
+            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Breakdown Perhitungan</p>
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div class="p-3 bg-gray-50 rounded-xl text-center">
+                    <p class="text-xs text-gray-400 mb-1">Metode</p>
+                    <p class="text-xs font-bold text-gray-700">
+                        {{ $lembur->metode === 'shift' ? 'Shift' : 'Jam Aktual' }}
+                    </p>
+                    @if($lembur->shift_kode)
+                    <p class="text-xs text-gray-400">{{ $lembur->shift_kode }}</p>
+                    @endif
+                    @if($lembur->jam_selesai_shift)
+                    <p class="text-xs text-gray-400">Shift s/d {{ $lembur->jam_selesai_shift }}</p>
+                    @endif
+                </div>
+                <div class="p-3 bg-blue-50 rounded-xl text-center">
+                    <p class="text-xs text-blue-400 mb-1">Multiplier</p>
+                    <p class="text-lg font-bold text-blue-600">×{{ $lembur->multiplier ?? 1.0 }}</p>
+                </div>
+                <div class="p-3 bg-gray-50 rounded-xl text-center">
+                    <p class="text-xs text-gray-400 mb-1">Upah/Jam</p>
+                    <p class="text-xs font-bold text-gray-700">
+                        Rp {{ number_format($lembur->upah_per_jam ?? 0, 0, ',', '.') }}
+                    </p>
+                </div>
+                <div class="p-3 bg-orange-50 rounded-xl text-center border border-orange-100">
+                    <p class="text-xs text-orange-500 mb-1">Nominal</p>
+                    <p class="text-base font-bold text-orange-700">
+                        Rp {{ number_format($lembur->nominal ?? 0, 0, ',', '.') }}
+                    </p>
+                </div>
+            </div>
+            @if($lembur->catatan_sistem)
+            <div class="mt-2 px-3 py-2 bg-amber-50 border border-amber-100 rounded-xl">
+                <p class="text-xs text-amber-700">{{ $lembur->catatan_sistem }}</p>
+            </div>
+            @endif
+        </div>
+        @else
+        {{-- Legacy nominal display --}}
+        <div class="mt-4 pt-4 border-t border-gray-100">
+            <p class="text-xs text-gray-400">Nominal</p>
+            <p class="font-bold text-gray-800 text-lg">Rp {{ number_format($lembur->nominal ?? 0, 0, ',', '.') }}</p>
+        </div>
+        @endif
     </div>
 
     {{-- Timeline approval --}}

@@ -11,29 +11,25 @@ class Lembur extends Model
     protected $table = 'lembur';
 
     protected $fillable = [
-        'pegawai_id',
-        'tanggal',
-        'jam_mulai',
-        'jam_selesai',
-        'durasi_jam',
-        'jenis',                  // HB (hari biasa) | HR (hari raya/libur)
-        'keterangan',
-        'status',
-        'nominal',
-        // Approval level 1 — Atasan
-        'catatan_atasan',
-        'approved_atasan_by',
-        'approved_atasan_at',
-        // Approval level 2 — HRD
-        'catatan_hrd',
-        'approved_hrd_by',
-        'approved_hrd_at',
+        'pegawai_id', 'tanggal', 'jam_mulai', 'jam_selesai',
+        'durasi_jam', 'durasi_aktual',
+        'jenis', 'keterangan', 'status', 'nominal',
         'sumber_draft',
+        // Kalkulasi baru
+        'metode', 'shift_kode', 'jam_selesai_shift',
+        'multiplier', 'upah_per_jam', 'catatan_sistem',
+        // Approval level 1 — Atasan
+        'catatan_atasan', 'approved_atasan_by', 'approved_atasan_at',
+        // Approval level 2 — HRD
+        'catatan_hrd', 'approved_hrd_by', 'approved_hrd_at',
     ];
 
     protected $casts = [
         'tanggal'            => 'date',
         'durasi_jam'         => 'float',
+        'durasi_aktual'      => 'float',
+        'multiplier'         => 'float',
+        'upah_per_jam'       => 'double',
         'nominal'            => 'double',
         'approved_atasan_at' => 'datetime',
         'approved_hrd_at'    => 'datetime',
@@ -77,6 +73,9 @@ class Lembur extends Model
         return $query->whereYear('tanggal', $tahun)->whereMonth('tanggal', $bulan);
     }
 
+    public function scopeDraft($query)        { return $query->where('status', 'Draft'); }
+    public function scopeAktif($query)        { return $query->whereNotIn('status', ['Ditolak Atasan','Ditolak HRD']); }
+
     // ─── Permission helpers ────────────────────────────────────────────────────
 
     public function bisaApproveAtasan(): bool
@@ -116,10 +115,35 @@ class Lembur extends Model
 
     public function getDurasiLabelAttribute(): string
     {
-        $total = (float) $this->durasi_jam;
-        $jam   = (int) $total;
-        $mnt   = (int)(($total - $jam) * 60);
-        return "{$jam}j" . ($mnt > 0 ? " {$mnt}m" : "");
+        return self::formatDurasi($this->durasi_jam);
+    }
+
+    public function getMetodeLabelAttribute(): string
+    {
+        return match($this->metode) {
+            'shift'      => 'Shift (' . ($this->shift_kode ?? '-') . ')',
+            'jam_aktual' => 'Jam Aktual',
+            default      => '—',
+        };
+    }
+
+    public function getBadgeStatusAttribute(): string
+    {
+        return match($this->status) {
+            'Draft'           => 'bg-gray-100 text-gray-600 border-gray-200',
+            'Menunggu Atasan' => 'bg-amber-50 text-amber-700 border-amber-200',
+            'Menunggu HRD'    => 'bg-blue-50 text-blue-700 border-blue-200',
+            'Disetujui'       => 'bg-green-50 text-green-700 border-green-200',
+            default           => 'bg-red-50 text-red-700 border-red-200',
+        };
+    }
+
+    public static function formatDurasi(?float $jam): string
+    {
+        if (!$jam) return '0j';
+        $j = (int) $jam;
+        $m = (int)(($jam - $j) * 60);
+        return "{$j}j" . ($m > 0 ? " {$m}m" : '');
     }
 
     // ─── Relasi ────────────────────────────────────────────────────────────────

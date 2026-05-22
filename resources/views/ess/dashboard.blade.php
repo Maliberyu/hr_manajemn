@@ -949,6 +949,61 @@
     </div>{{-- end tab payroll --}}
 
 </div>
+
+{{-- ── Popup Draft Lembur Otomatis (setelah checkout) ──────────────────────── --}}
+<div x-show="lemburDraft !== null" x-cloak
+     class="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4"
+     style="background: rgba(0,0,0,0.45)">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden"
+         x-transition:enter="transition ease-out duration-200"
+         x-transition:enter-start="opacity-0 translate-y-4"
+         x-transition:enter-end="opacity-100 translate-y-0">
+
+        {{-- Header --}}
+        <div class="px-5 py-4 bg-orange-50 border-b border-orange-100 flex items-start gap-3">
+            <div class="w-9 h-9 bg-orange-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                <svg class="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+            </div>
+            <div>
+                <p class="text-sm font-bold text-orange-800">Terdeteksi Lembur!</p>
+                <p class="text-xs text-orange-700 mt-0.5">
+                    Anda bekerja melebihi jam shift —
+                    <strong x-text="lemburDraft && lemburDraft.label"></strong>
+                </p>
+            </div>
+        </div>
+
+        {{-- Body --}}
+        <div class="px-5 py-4">
+            <p class="text-sm text-gray-700 mb-1">Draft lembur telah dibuat secara otomatis.</p>
+            <p class="text-xs text-gray-500">
+                Konfirmasi untuk mengajukan ke atasan, atau batalkan jika tidak ingin dihitung sebagai lembur.
+            </p>
+            <div class="mt-3 p-3 bg-blue-50 border border-blue-100 rounded-xl">
+                <div class="flex items-center gap-2 text-xs text-blue-700 flex-wrap">
+                    <span class="px-2 py-0.5 bg-white rounded-full border border-blue-200">Draft dibuat</span>
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                    <span class="px-2 py-0.5 bg-white rounded-full border border-blue-200">Kamu konfirmasi</span>
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                    <span class="px-2 py-0.5 bg-green-100 text-green-700 rounded-full border border-green-200">Approval atasan</span>
+                </div>
+            </div>
+        </div>
+
+        {{-- Actions --}}
+        <div class="px-5 py-4 border-t border-gray-100 flex gap-3">
+            <a href="{{ route('lembur.index') }}"
+               class="flex-1 py-2.5 text-sm bg-orange-600 text-white rounded-xl font-semibold text-center hover:bg-orange-700 transition">
+                Lihat & Konfirmasi
+            </a>
+            <button @click="tutupPopupLembur(true)"
+                    class="flex-1 py-2.5 text-sm text-gray-600 bg-gray-100 rounded-xl font-semibold hover:bg-gray-200 transition">
+                Nanti Saja
+            </button>
+        </div>
+    </div>
+</div>
+
 @endsection
 
 @push('scripts')
@@ -1143,6 +1198,9 @@ function essPortal() {
             .catch(() => { this.loading = false; this.setNotif('Terjadi kesalahan koneksi.', 'error'); });
         },
 
+        // State popup draft lembur
+        lemburDraft: null,  // { label: '2j 30m', nominal: 'Rp 150.000' }
+
         doCheckOut() {
             if (!this.lokasiku || !this.capturedFoto || this.loading) return;
             this.loading = true;
@@ -1155,10 +1213,30 @@ function essPortal() {
             .then(r => r.json().then(d => ({ ok: r.ok, data: d })))
             .then(({ ok, data }) => {
                 this.loading = false;
-                if (ok) { this.setNotif(data.message, 'success'); setTimeout(() => location.reload(), 1500); }
-                else    { this.cameraState = null; this.setNotif(data.message || 'Gagal check-out.', 'error'); }
+                if (ok) {
+                    // Cek apakah ada draft lembur otomatis
+                    if (data.lembur_draft) {
+                        this.lemburDraft = {
+                            label: data.lembur_label,
+                            menit: data.lembur_menit,
+                        };
+                        // Tampilkan popup sebentar, baru reload
+                        this.setNotif('Check-out berhasil.', 'success');
+                    } else {
+                        this.setNotif(data.message, 'success');
+                        setTimeout(() => location.reload(), 1500);
+                    }
+                } else {
+                    this.cameraState = null;
+                    this.setNotif(data.message || 'Gagal check-out.', 'error');
+                }
             })
             .catch(() => { this.loading = false; this.setNotif('Terjadi kesalahan koneksi.', 'error'); });
+        },
+
+        tutupPopupLembur(reload = false) {
+            this.lemburDraft = null;
+            if (reload) location.reload();
         },
 
         haversine(lat1, lng1, lat2, lng2) {
