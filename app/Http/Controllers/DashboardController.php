@@ -124,21 +124,37 @@ class DashboardController extends Controller
         );
 
         // ─── Rekap SDM chart data (real-time) ────────────────────────────────────
-        $rekapDep   = $request->get('rekap_dep');
-        $bulanRekap = (int) ($request->get('rekap_bulan', now()->month));
-        $tahunRekap = (int) ($request->get('rekap_tahun', now()->year));
+        // Atasan tidak bisa filter per departemen (hanya lihat bawahan sendiri)
+        $rekapDep  = $isAtasan ? null : $request->get('rekap_dep');
+
+        $dariTgl   = $request->get('dari_tgl')
+            ? Carbon::parse($request->get('dari_tgl'))->startOfDay()
+            : now()->startOfMonth()->startOfDay();
+        $sampaiTgl = $request->get('sampai_tgl')
+            ? Carbon::parse($request->get('sampai_tgl'))->endOfDay()
+            : now()->endOfDay();
+
+        // Batas maksimal 1 tahun untuk mencegah query berat
+        if ($dariTgl->diffInDays($sampaiTgl) > 366) {
+            $sampaiTgl = $dariTgl->copy()->addYear()->endOfDay();
+        }
+
+        // Tetap ada untuk backward-compat link "Selengkapnya"
+        $bulanRekap  = $dariTgl->month;
+        $tahunRekap  = $dariTgl->year;
+        $periodLabel = $dariTgl->translatedFormat('d M Y') . ' — ' . $sampaiTgl->translatedFormat('d M Y');
 
         $departemen = $this->safe(
             fn() => \App\Models\Departemen::orderBy('nama')->get(['dep_id', 'nama']),
             collect()
         );
 
-        $grafikRekapAbsensi = $this->safe(function () use ($bulanRekap, $tahunRekap, $rekapDep, $isAtasan, $nikBawahan) {
+        $grafikRekapAbsensi = $this->safe(function () use ($dariTgl, $sampaiTgl, $rekapDep, $isAtasan, $nikBawahan) {
             return DB::table('absensi as a')
                 ->join('pegawai as p', 'a.pegawai_id', '=', 'p.id')
                 ->join('departemen as d', 'p.departemen', '=', 'd.dep_id')
-                ->whereMonth('a.tanggal', $bulanRekap)
-                ->whereYear('a.tanggal', $tahunRekap)
+                ->whereDate('a.tanggal', '>=', $dariTgl)
+                ->whereDate('a.tanggal', '<=', $sampaiTgl)
                 ->when($rekapDep, fn($q) => $q->where('p.departemen', $rekapDep))
                 ->when($isAtasan && $nikBawahan, fn($q) => $q->whereIn('p.nik', $nikBawahan))
                 ->selectRaw("d.dep_id, d.nama as dep_nama,
@@ -160,9 +176,10 @@ class DashboardController extends Controller
                 ]);
         }, collect());
 
-        $grafikRekapCuti = $this->safe(function () use ($tahunRekap, $rekapDep, $isAtasan, $nikBawahan) {
+        $grafikRekapCuti = $this->safe(function () use ($dariTgl, $sampaiTgl, $rekapDep, $isAtasan, $nikBawahan) {
             return PengajuanCuti::where('status', 'Disetujui')
-                ->whereYear('tanggal', $tahunRekap)
+                ->whereDate('tanggal', '>=', $dariTgl)
+                ->whereDate('tanggal', '<=', $sampaiTgl)
                 ->when($isAtasan && $nikBawahan, fn($q) => $q->whereIn('nik', $nikBawahan))
                 ->when($rekapDep, fn($q) => $q->whereHas('pegawai', fn($p) => $p->where('departemen', $rekapDep)))
                 ->selectRaw('urgensi, COUNT(*) as jumlah, SUM(jumlah) as total_hari')
@@ -176,10 +193,10 @@ class DashboardController extends Controller
                 ]);
         }, collect());
 
-        $grafikRekapIjin = $this->safe(function () use ($bulanRekap, $tahunRekap, $rekapDep, $isAtasan, $nikBawahan) {
+        $grafikRekapIjin = $this->safe(function () use ($dariTgl, $sampaiTgl, $rekapDep, $isAtasan, $nikBawahan) {
             return PengajuanIjin::where('status', 'Disetujui')
-                ->whereMonth('tanggal', $bulanRekap)
-                ->whereYear('tanggal', $tahunRekap)
+                ->whereDate('tanggal', '>=', $dariTgl)
+                ->whereDate('tanggal', '<=', $sampaiTgl)
                 ->when($isAtasan && $nikBawahan, fn($q) => $q->whereIn('nik', $nikBawahan))
                 ->when($rekapDep, fn($q) => $q->whereHas('pegawai', fn($p) => $p->where('departemen', $rekapDep)))
                 ->selectRaw('jenis, COUNT(*) as jumlah')
@@ -192,13 +209,14 @@ class DashboardController extends Controller
                 ]);
         }, collect());
 
-        $grafikRekapPelatihan = $this->safe(function () use ($tahunRekap, $rekapDep, $isAtasan, $nikBawahan) {
+        $grafikRekapPelatihan = $this->safe(function () use ($dariTgl, $sampaiTgl, $rekapDep, $isAtasan, $nikBawahan) {
             $ihtData = DB::table('hr_iht_peserta as ip')
                 ->join('hr_iht as i', 'ip.iht_id', '=', 'i.id')
                 ->join('pegawai as p', 'ip.pegawai_id', '=', 'p.id')
                 ->join('departemen as d', 'p.departemen', '=', 'd.dep_id')
                 ->where('ip.status', 'hadir')
-                ->whereYear('i.tanggal_mulai', $tahunRekap)
+                ->whereDate('i.tanggal_mulai', '>=', $dariTgl)
+                ->whereDate('i.tanggal_mulai', '<=', $sampaiTgl)
                 ->when($rekapDep, fn($q) => $q->where('p.departemen', $rekapDep))
                 ->when($isAtasan && $nikBawahan, fn($q) => $q->whereIn('p.nik', $nikBawahan))
                 ->selectRaw("d.dep_id, d.nama as dep_nama,
@@ -210,7 +228,8 @@ class DashboardController extends Controller
                 ->join('pegawai as p', 'te.pegawai_id', '=', 'p.id')
                 ->join('departemen as d', 'p.departemen', '=', 'd.dep_id')
                 ->whereIn('te.status', ['tervalidasi', 'disetujui'])
-                ->whereYear('te.tanggal_mulai', $tahunRekap)
+                ->whereDate('te.tanggal_mulai', '>=', $dariTgl)
+                ->whereDate('te.tanggal_mulai', '<=', $sampaiTgl)
                 ->when($rekapDep, fn($q) => $q->where('p.departemen', $rekapDep))
                 ->when($isAtasan && $nikBawahan, fn($q) => $q->whereIn('p.nik', $nikBawahan))
                 ->selectRaw("d.dep_id, d.nama as dep_nama,
@@ -244,6 +263,7 @@ class DashboardController extends Controller
             'pegawaiBelumAdaAtasan', 'isAtasan', 'nikBawahan',
             'grafikRekapAbsensi', 'grafikRekapCuti', 'grafikRekapIjin', 'grafikRekapPelatihan',
             'departemen', 'rekapDep', 'bulanRekap', 'tahunRekap',
+            'dariTgl', 'sampaiTgl', 'periodLabel',
             'hrdBerkasKadaluarsa', 'hrdBerkasSetting'
         ));
     }

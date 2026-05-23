@@ -369,23 +369,35 @@
     <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
         <div>
             <h2 class="text-sm font-bold text-gray-800">Rekap SDM</h2>
-            <p class="text-xs text-gray-400">Statistik bulanan & tahunan berdasarkan data real-time</p>
+            <p class="text-xs text-gray-400">
+                {{ $periodLabel }}
+                @if($rekapDep)
+                · {{ $departemen->firstWhere('dep_id', $rekapDep)?->nama }}
+                @endif
+            </p>
         </div>
         <form method="GET" action="{{ route('dashboard') }}" class="flex flex-wrap items-center gap-2">
-            <select name="rekap_bulan"
-                    class="px-3 py-1.5 text-xs border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-400 focus:outline-none bg-white">
-                @foreach(range(1,12) as $b)
-                <option value="{{ $b }}" {{ $bulanRekap == $b ? 'selected' : '' }}>
-                    {{ \Carbon\Carbon::create(null,$b)->translatedFormat('M') }}
-                </option>
-                @endforeach
-            </select>
-            <select name="rekap_tahun"
-                    class="px-3 py-1.5 text-xs border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-400 focus:outline-none bg-white">
-                @foreach(range(now()->year-1, now()->year+1) as $t)
-                <option value="{{ $t }}" {{ $tahunRekap == $t ? 'selected' : '' }}>{{ $t }}</option>
-                @endforeach
-            </select>
+
+            {{-- Dari tanggal --}}
+            <div class="flex items-center gap-1">
+                <label class="text-xs text-gray-400 whitespace-nowrap">Dari</label>
+                <input type="date" name="dari_tgl"
+                       value="{{ $dariTgl->format('Y-m-d') }}"
+                       max="{{ now()->format('Y-m-d') }}"
+                       class="px-2 py-1.5 text-xs border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-400 focus:outline-none bg-white">
+            </div>
+
+            {{-- Sampai tanggal --}}
+            <div class="flex items-center gap-1">
+                <label class="text-xs text-gray-400 whitespace-nowrap">s/d</label>
+                <input type="date" name="sampai_tgl"
+                       value="{{ $sampaiTgl->format('Y-m-d') }}"
+                       max="{{ now()->format('Y-m-d') }}"
+                       class="px-2 py-1.5 text-xs border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-400 focus:outline-none bg-white">
+            </div>
+
+            {{-- Filter Departemen — HANYA untuk HRD & Admin, bukan Atasan --}}
+            @if(!($isAtasan ?? false))
             <select name="rekap_dep"
                     class="px-3 py-1.5 text-xs border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-400 focus:outline-none bg-white">
                 <option value="">Semua Departemen</option>
@@ -395,11 +407,13 @@
                 </option>
                 @endforeach
             </select>
+            @endif
+
             <button type="submit"
                     class="px-3 py-1.5 text-xs bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium">
                 Tampilkan
             </button>
-            @if($rekapDep || request('rekap_bulan') || request('rekap_tahun'))
+            @if(request('dari_tgl') || request('sampai_tgl') || request('rekap_dep'))
             <a href="{{ route('dashboard') }}" class="text-xs text-gray-400 hover:text-gray-600">Reset</a>
             @endif
         </form>
@@ -413,7 +427,6 @@
         $kpiJamTrain = $grafikRekapPelatihan->sum(fn($d) => ($d['jam_iht'] ?? 0) + ($d['jam_eksternal'] ?? 0));
         $kpiHariCuti = $grafikRekapCuti->sum('total_hari');
         $kpiIjin     = $grafikRekapIjin->sum('jumlah');
-        $periodLabel = \Carbon\Carbon::create($tahunRekap, $bulanRekap)->translatedFormat('F Y');
     @endphp
 
     {{-- 2×2 chart grid --}}
