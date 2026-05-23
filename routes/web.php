@@ -47,6 +47,9 @@ Route::get('/', fn() => redirect()->route('dashboard'));
 Route::get('/iht/{iht}/hadir/{jenis}',  [IhtAbsensiController::class, 'form'])->name('iht.hadir.form');
 Route::post('/iht/{iht}/hadir/{jenis}', [IhtAbsensiController::class, 'simpan'])->name('iht.hadir.simpan');
 
+// ─── Verifikasi kehadiran peserta IHT (publik, tidak perlu login) ─────────────
+Route::get('/training/verify/{iht}/{peserta}', [\App\Http\Controllers\Training\TrainingController::class, 'verifyPeserta'])->name('training.iht.peserta.verify');
+
 // ─── Auth routes (publik) ───────────────────────────────────────────────────────
 Route::get('/login',    [LoginController::class, 'showLogin'])->name('login');
 Route::post('/login',   [LoginController::class, 'login']);

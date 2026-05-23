@@ -316,9 +316,31 @@ class TrainingController extends Controller
             ->orderBy('created_at')
             ->get();
 
-        $logoUrl = TrainingSetting::logoUrl();
+        // Auto-generate nomor sertifikat untuk hadir/selesai yang belum punya
+        foreach ($peserta as $p) {
+            if (in_array($p->status, ['hadir', 'selesai']) && !$p->nomor_sertifikat) {
+                $nomor = IHT::generateNomorSertifikat();
+                $p->update([
+                    'nomor_sertifikat' => $nomor,
+                    'sertifikat_at'    => $p->sertifikat_at ?? now(),
+                ]);
+                $p->nomor_sertifikat = $nomor; // refresh local object
+            }
+        }
 
-        return view('training.iht.cetak-peserta', compact('iht', 'peserta', 'logoUrl'));
+        $logoUrl    = TrainingSetting::logoUrl();
+        $verifyBase = route('training.iht.peserta.verify', [$iht->id, '__ID__']);
+
+        return view('training.iht.cetak-peserta', compact('iht', 'peserta', 'logoUrl', 'verifyBase'));
+    }
+
+    // ── Halaman Verifikasi Kehadiran (publik) ─────────────────────────────────
+
+    public function verifyPeserta(IHT $iht, IHTPeserta $peserta)
+    {
+        abort_if($peserta->iht_id !== $iht->id, 404);
+        $peserta->load('pegawai.departemenRef');
+        return view('training.iht.verify-peserta', compact('iht', 'peserta'));
     }
 
     // ── Setting Training ──────────────────────────────────────────────────────
