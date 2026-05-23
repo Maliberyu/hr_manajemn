@@ -307,6 +307,20 @@ class TrainingController extends Controller
         return redirect()->route('training.iht.index')->with('success', 'IHT dibatalkan.');
     }
 
+    // ── Cetak Daftar Peserta ──────────────────────────────────────────────────
+
+    public function cetakPeserta(IHT $iht)
+    {
+        $peserta = IHTPeserta::with('pegawai.departemenRef')
+            ->where('iht_id', $iht->id)
+            ->orderBy('created_at')
+            ->get();
+
+        $logoUrl = TrainingSetting::logoUrl();
+
+        return view('training.iht.cetak-peserta', compact('iht', 'peserta', 'logoUrl'));
+    }
+
     // ── Setting Training ──────────────────────────────────────────────────────
 
     public function setting()

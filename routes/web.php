@@ -448,6 +448,8 @@ Route::middleware(['auth', 'role:hrd,admin'])->group(function () {
             Route::get( '/{iht}/peserta/{peserta}/sertifikat/download',[TrainingController::class, 'downloadSertifikat'])->name('peserta.sertifikat.download');
             // Generate signed URL untuk QR absensi
             Route::get('/{iht}/absensi-url/{jenis}', [IhtAbsensiController::class, 'generateUrl'])->name('peserta.absensi.url');
+            // Cetak daftar peserta
+            Route::get('/{iht}/cetak-peserta', [TrainingController::class, 'cetakPeserta'])->name('cetak-peserta');
         });
     });
 });

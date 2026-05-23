@@ -150,18 +150,29 @@
 
     {{-- Daftar Peserta --}}
     <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-        <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+        <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between gap-3">
             <p class="text-sm font-semibold text-gray-700">Daftar Peserta ({{ $peserta->count() }})</p>
-            @if($iht->status === 'aktif')
-            <form method="POST" action="{{ route('training.iht.tutup', $iht) }}"
-                  onsubmit="return confirm('Tutup IHT ini sekarang?')">
-                @csrf
-                <button type="submit"
-                        class="px-3 py-1.5 text-xs bg-green-600 text-white rounded-lg hover:bg-green-700 transition">
-                    Tutup IHT
-                </button>
-            </form>
-            @endif
+            <div class="flex items-center gap-2">
+                @if($peserta->isNotEmpty())
+                <a href="{{ route('training.iht.cetak-peserta', $iht) }}" target="_blank"
+                   class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-gray-100 text-gray-700 hover:bg-gray-200 rounded-lg transition">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/>
+                    </svg>
+                    Cetak Peserta
+                </a>
+                @endif
+                @if($iht->status === 'aktif')
+                <form method="POST" action="{{ route('training.iht.tutup', $iht) }}"
+                      onsubmit="return confirm('Tutup IHT ini sekarang?')">
+                    @csrf
+                    <button type="submit"
+                            class="px-3 py-1.5 text-xs bg-green-600 text-white rounded-lg hover:bg-green-700 transition">
+                        Tutup IHT
+                    </button>
+                </form>
+                @endif
+            </div>
         </div>
 
         @if($peserta->isEmpty())
