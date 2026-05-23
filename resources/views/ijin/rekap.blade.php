@@ -1,7 +1,7 @@
 @extends('layouts.app')
 @section('title', 'Rekap Ijin')
 @section('page-title', 'Rekap Ijin Bulanan')
-@section('page-subtitle', 'Rekapitulasi sakit · telat · pulang duluan per karyawan')
+@section('page-subtitle', 'Rekapitulasi ijin sakit & ijin khusus per karyawan')
 
 @section('content')
 <div class="space-y-4">
@@ -81,24 +81,18 @@
     {{-- Summary chips --}}
     <div class="flex flex-wrap gap-3">
         @php
-            $totalSakit = $rekap->sum(fn($r) => $r['rows']['sakit']?->kali ?? 0);
-            $totalTelat = $rekap->sum(fn($r) => $r['rows']['terlambat']?->kali ?? 0);
-            $totalPulang = $rekap->sum(fn($r) => $r['rows']['pulang_duluan']?->kali ?? 0);
+            $totalSakit  = $rekap->sum(fn($r) => $r['rows']['sakit']?->kali  ?? 0);
+            $totalKhusus = $rekap->sum(fn($r) => $r['rows']['khusus']?->kali ?? 0);
         @endphp
         <div class="flex items-center gap-2 bg-yellow-50 border border-yellow-200 px-4 py-2 rounded-xl text-sm">
             <span class="w-2 h-2 rounded-full bg-yellow-400"></span>
-            <span class="text-yellow-700">Sakit:</span>
+            <span class="text-yellow-700">Ijin Sakit:</span>
             <span class="font-bold text-yellow-800">{{ $totalSakit }}x</span>
         </div>
         <div class="flex items-center gap-2 bg-orange-50 border border-orange-200 px-4 py-2 rounded-xl text-sm">
             <span class="w-2 h-2 rounded-full bg-orange-400"></span>
-            <span class="text-orange-700">Terlambat:</span>
-            <span class="font-bold text-orange-800">{{ $totalTelat }}x</span>
-        </div>
-        <div class="flex items-center gap-2 bg-purple-50 border border-purple-200 px-4 py-2 rounded-xl text-sm">
-            <span class="w-2 h-2 rounded-full bg-purple-400"></span>
-            <span class="text-purple-700">Pulang Duluan:</span>
-            <span class="font-bold text-purple-800">{{ $totalPulang }}x</span>
+            <span class="text-orange-700">Ijin Khusus:</span>
+            <span class="font-bold text-orange-800">{{ $totalKhusus }}x</span>
         </div>
     </div>
 
@@ -145,7 +139,7 @@
                         @foreach($jenisList as $key => $label)
                         @php
                             $row = $r['rows'][$key] ?? null;
-                            $colorMap = ['sakit' => 'yellow', 'terlambat' => 'orange', 'pulang_duluan' => 'purple'];
+                            $colorMap = ['sakit' => 'yellow', 'khusus' => 'orange'];
                             $color = $colorMap[$key] ?? 'blue';
                         @endphp
                         <td class="px-3 py-3 text-center">
