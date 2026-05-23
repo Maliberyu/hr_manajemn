@@ -19,17 +19,31 @@ class MasterKaryawanController extends Controller
 
     public function index(Request $request)
     {
+        // Urutan
+        $urut = $request->urut;
+        $order = match($urut) {
+            'terlama' => ['mulai_kerja', 'asc'],
+            'terbaru' => ['mulai_kerja', 'desc'],
+            default   => ['nama', 'asc'],
+        };
+
         $query = Pegawai::with('departemenRef')
-            ->when($request->q, fn($q, $s) => $q->cari($s))
-            ->when($request->departemen, fn($q, $d) => $q->departemen($d))
-            ->when($request->status, fn($q, $s) => $q->where('stts_aktif', $s))
-            ->when($request->jk, fn($q, $j) => $q->where('jk', $j))
-            ->orderBy('nama');
+            ->when($request->q,            fn($q, $s) => $q->cari($s))
+            ->when($request->departemen,   fn($q, $d) => $q->departemen($d))
+            ->when($request->status,       fn($q, $s) => $q->where('stts_aktif', $s))
+            ->when($request->status_kerja, fn($q, $s) => $q->where('status_kerja', $s))
+            ->when($request->jk,           fn($q, $j) => $q->where('jk', $j))
+            ->orderBy($order[0], $order[1]);
 
-        $pegawai    = $query->paginate(20)->withQueryString();
-        $departemen = Departemen::orderBy('nama')->pluck('nama', 'dep_id');
+        $pegawai         = $query->paginate(20)->withQueryString();
+        $departemen      = Departemen::orderBy('nama')->pluck('nama', 'dep_id');
+        $statusKerjaList = Pegawai::whereNotNull('status_kerja')
+                               ->where('status_kerja', '!=', '')
+                               ->distinct()
+                               ->orderBy('status_kerja')
+                               ->pluck('status_kerja');
 
-        return view('karyawan.index', compact('pegawai', 'departemen'));
+        return view('karyawan.index', compact('pegawai', 'departemen', 'statusKerjaList'));
     }
 
     // ─── Create ────────────────────────────────────────────────────────────────

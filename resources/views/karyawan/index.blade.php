@@ -33,7 +33,8 @@
 {{-- ── Filter ─────────────────────────────────────────────────────────────────── --}}
 <form method="GET" action="{{ route('karyawan.index') }}"
     class="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 mb-5">
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+
         {{-- Search --}}
         <div class="relative">
             <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -45,6 +46,7 @@
                 placeholder="Nama / NIK / Jabatan..."
                 class="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400">
         </div>
+
         {{-- Departemen --}}
         <select name="departemen"
             class="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white">
@@ -53,13 +55,34 @@
             <option value="{{ $id }}" {{ request('departemen') == $id ? 'selected' : '' }}>{{ $nama }}</option>
             @endforeach
         </select>
-        {{-- Status --}}
+
+        {{-- Status Aktif --}}
         <select name="status"
             class="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white">
-            <option value="">Semua Status</option>
-            <option value="AKTIF" {{ request('status') === 'AKTIF' ? 'selected' : '' }}>Aktif</option>
-            <option value="NON AKTIF" {{ request('status') === 'NON AKTIF' ? 'selected' : '' }}>Non Aktif</option>
+            <option value="">Semua Status Aktif</option>
+            <option value="AKTIF"        {{ request('status') === 'AKTIF'        ? 'selected' : '' }}>Aktif</option>
+            <option value="CUTI"         {{ request('status') === 'CUTI'         ? 'selected' : '' }}>Cuti</option>
+            <option value="KELUAR"       {{ request('status') === 'KELUAR'       ? 'selected' : '' }}>Keluar</option>
+            <option value="TENAGA LUAR"  {{ request('status') === 'TENAGA LUAR'  ? 'selected' : '' }}>Tenaga Luar</option>
         </select>
+
+        {{-- Status Kerja --}}
+        <select name="status_kerja"
+            class="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white">
+            <option value="">Semua Status Kerja</option>
+            @foreach($statusKerjaList as $sk)
+            <option value="{{ $sk }}" {{ request('status_kerja') === $sk ? 'selected' : '' }}>{{ $sk }}</option>
+            @endforeach
+        </select>
+
+        {{-- Urutan --}}
+        <select name="urut"
+            class="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white">
+            <option value=""        {{ request('urut') === ''        ? 'selected' : '' }}>Urut: Nama A–Z</option>
+            <option value="terlama" {{ request('urut') === 'terlama' ? 'selected' : '' }}>Urut: Terlama Bekerja</option>
+            <option value="terbaru" {{ request('urut') === 'terbaru' ? 'selected' : '' }}>Urut: Terbaru Bergabung</option>
+        </select>
+
         {{-- Actions --}}
         <div class="flex gap-2">
             <button type="submit"
@@ -71,7 +94,40 @@
                 Reset
             </a>
         </div>
+
     </div>
+
+    {{-- Indikator filter aktif --}}
+    @php $activeFilters = array_filter(request()->only(['q','departemen','status','status_kerja','urut'])); @endphp
+    @if(count($activeFilters))
+    <div class="mt-3 flex flex-wrap gap-2">
+        @if(request('q'))
+        <span class="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-50 text-blue-700 text-xs rounded-full">
+            Cari: "{{ request('q') }}"
+        </span>
+        @endif
+        @if(request('departemen'))
+        <span class="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-50 text-blue-700 text-xs rounded-full">
+            Dept: {{ $departemen[request('departemen')] ?? request('departemen') }}
+        </span>
+        @endif
+        @if(request('status'))
+        <span class="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-50 text-blue-700 text-xs rounded-full">
+            Status: {{ request('status') }}
+        </span>
+        @endif
+        @if(request('status_kerja'))
+        <span class="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-50 text-blue-700 text-xs rounded-full">
+            Kerja: {{ request('status_kerja') }}
+        </span>
+        @endif
+        @if(request('urut'))
+        <span class="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-50 text-blue-700 text-xs rounded-full">
+            {{ request('urut') === 'terlama' ? 'Terlama Bekerja' : 'Terbaru Bergabung' }}
+        </span>
+        @endif
+    </div>
+    @endif
 </form>
 
 {{-- ── Tabel ──────────────────────────────────────────────────────────────────── --}}
