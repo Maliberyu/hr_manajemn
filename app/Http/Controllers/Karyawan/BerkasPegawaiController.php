@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Karyawan;
 
 use App\Http\Controllers\Controller;
 use App\Models\BerkasPegawai;
+use App\Models\BerkasSetting;
 use App\Models\MasterBerkasPegawai;
 use App\Models\Pegawai;
 use Illuminate\Http\Request;
@@ -20,10 +21,10 @@ class BerkasPegawaiController extends Controller
                       ->orderByDesc('tgl_upload')
                       ->get();
 
-        // Nama-nama jenis yang sudah ada untuk autocomplete
         $jenisList = MasterBerkasPegawai::orderBy('nama')->pluck('nama');
+        $setting   = BerkasSetting::get();
 
-        return view('karyawan.berkas.index', compact('karyawan', 'berkas', 'jenisList'));
+        return view('karyawan.berkas.index', compact('karyawan', 'berkas', 'jenisList', 'setting'));
     }
 
     // ─── Upload berkas baru ────────────────────────────────────────────────────
@@ -31,12 +32,13 @@ class BerkasPegawaiController extends Controller
     public function store(Request $request, Pegawai $karyawan)
     {
         $request->validate([
-            'nama_dokumen' => 'required|string|max:100',
-            'file'         => 'required|file|mimes:pdf,jpg,jpeg,png|max:5120',
-            'keterangan'   => 'nullable|string|max:255',
+            'nama_dokumen'   => 'required|string|max:100',
+            'file'           => 'required|file|mimes:pdf,jpg,jpeg,png|max:5120',
+            'keterangan'     => 'nullable|string|max:255',
+            'tgl_kadaluarsa' => 'nullable|date|after_or_equal:today',
+            'notif_aktif'    => 'nullable|boolean',
         ]);
 
-        // Auto-create atau reuse jenis berkas berdasarkan nama
         $jenis = MasterBerkasPegawai::firstOrCreate(
             ['nama' => trim($request->nama_dokumen)],
             [
@@ -51,7 +53,6 @@ class BerkasPegawaiController extends Controller
         $slug     = preg_replace('/[^A-Za-z0-9]+/', '_', $request->nama_dokumen);
         $path     = "hr_berkas/{$karyawan->nik}/{$slug}_{$karyawan->nik}_{$jenis->id}.{$ext}";
 
-        // Hapus file lama jika dokumen yang sama sudah ada
         $existing = BerkasPegawai::where('nik', $karyawan->nik)
                                   ->where('jenis_id', $jenis->id)
                                   ->first();
@@ -67,15 +68,57 @@ class BerkasPegawaiController extends Controller
         );
 
         BerkasPegawai::create([
-            'jenis_id'   => $jenis->id,
-            'nik'        => $karyawan->nik,
-            'nama_file'  => $namaFile,
-            'path'       => $path,
-            'tgl_upload' => today(),
-            'keterangan' => $request->keterangan,
+            'jenis_id'       => $jenis->id,
+            'nik'            => $karyawan->nik,
+            'nama_file'      => $namaFile,
+            'path'           => $path,
+            'tgl_upload'     => today(),
+            'keterangan'     => $request->keterangan,
+            'tgl_kadaluarsa' => $request->tgl_kadaluarsa ?: null,
+            'notif_aktif'    => $request->tgl_kadaluarsa ? (bool) $request->notif_aktif : false,
         ]);
 
         return back()->with('success', "Berkas \"{$jenis->nama}\" berhasil diupload.");
+    }
+
+    // ─── Update tanggal kadaluarsa berkas ─────────────────────────────────────
+
+    public function updateKadaluarsa(Request $request, Pegawai $karyawan, BerkasPegawai $berkas)
+    {
+        abort_if($berkas->nik !== $karyawan->nik, 403);
+
+        $request->validate([
+            'tgl_kadaluarsa' => 'nullable|date',
+            'notif_aktif'    => 'nullable|boolean',
+        ]);
+
+        $tgl = $request->tgl_kadaluarsa ?: null;
+
+        $berkas->update([
+            'tgl_kadaluarsa' => $tgl,
+            'notif_aktif'    => $tgl ? (bool) $request->notif_aktif : false,
+        ]);
+
+        return back()->with('success', 'Pengaturan kadaluarsa berhasil disimpan.');
+    }
+
+    // ─── Simpan setting threshold notifikasi ──────────────────────────────────
+
+    public function updateSetting(Request $request)
+    {
+        $request->validate([
+            'hari_notif_1' => 'required|integer|min:1|max:365',
+            'hari_notif_2' => 'required|integer|min:1|max:30',
+        ]);
+
+        $setting = BerkasSetting::first();
+        if ($setting) {
+            $setting->update($request->only('hari_notif_1', 'hari_notif_2'));
+        } else {
+            BerkasSetting::create($request->only('hari_notif_1', 'hari_notif_2'));
+        }
+
+        return back()->with('success', 'Setting notifikasi kadaluarsa berhasil disimpan.');
     }
 
     // ─── Download / preview berkas ────────────────────────────────────────────

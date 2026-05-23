@@ -46,6 +46,90 @@
 </div>
 @endif
 
+{{-- Notif: berkas karyawan akan kadaluarsa --}}
+@if(($hrdBerkasKadaluarsa ?? collect())->isNotEmpty())
+@php
+    $bkExpired = $hrdBerkasKadaluarsa->filter(fn($b) => $b->status_kadaluarsa === 'kadaluarsa');
+    $bkUrgent  = $hrdBerkasKadaluarsa->filter(fn($b) => $b->status_kadaluarsa === 'urgent');
+    $isUrgent  = $bkExpired->isNotEmpty() || $bkUrgent->isNotEmpty();
+@endphp
+<div class="mb-4 rounded-2xl border overflow-hidden {{ $isUrgent ? 'border-red-200 bg-red-50' : 'border-amber-200 bg-amber-50' }}"
+     x-data="{ expandBerkas: false }">
+    <div class="px-4 py-3 flex items-center justify-between gap-3">
+        <div class="flex items-center gap-3">
+            <svg class="w-5 h-5 flex-shrink-0 {{ $isUrgent ? 'text-red-500' : 'text-amber-500' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+            </svg>
+            <div>
+                <p class="text-sm font-semibold {{ $isUrgent ? 'text-red-800' : 'text-amber-800' }}">
+                    {{ $hrdBerkasKadaluarsa->count() }} dokumen karyawan perlu diperbarui
+                    @if($bkExpired->isNotEmpty())
+                    <span class="ml-1 px-1.5 py-0.5 text-xs bg-red-200 text-red-800 rounded-full">{{ $bkExpired->count() }} kadaluarsa</span>
+                    @endif
+                    @if($bkUrgent->isNotEmpty())
+                    <span class="ml-1 px-1.5 py-0.5 text-xs bg-orange-200 text-orange-800 rounded-full">{{ $bkUrgent->count() }} urgent</span>
+                    @endif
+                </p>
+                <p class="text-xs {{ $isUrgent ? 'text-red-600' : 'text-amber-600' }} mt-0.5">
+                    Dokumen SIP/STR atau sertifikat yang masa berlakunya habis atau hampir habis.
+                </p>
+            </div>
+        </div>
+        <button @click="expandBerkas = !expandBerkas"
+                class="flex-shrink-0 flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-lg transition
+                       {{ $isUrgent ? 'bg-red-600 text-white hover:bg-red-700' : 'bg-amber-500 text-white hover:bg-amber-600' }}">
+            <span x-text="expandBerkas ? 'Tutup' : 'Lihat Detail'"></span>
+            <svg class="w-3 h-3 transition-transform" :class="expandBerkas ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+            </svg>
+        </button>
+    </div>
+
+    <div x-show="expandBerkas" x-cloak class="border-t {{ $isUrgent ? 'border-red-200' : 'border-amber-200' }}">
+        <div class="divide-y {{ $isUrgent ? 'divide-red-100' : 'divide-amber-100' }} max-h-60 overflow-y-auto">
+            @foreach($hrdBerkasKadaluarsa as $bk)
+            <div class="px-4 py-2.5 flex items-center justify-between gap-3">
+                <div class="flex items-center gap-2 min-w-0">
+                    <div class="w-7 h-7 rounded-full bg-white border {{ $isUrgent ? 'border-red-200' : 'border-amber-200' }} flex items-center justify-center flex-shrink-0 overflow-hidden">
+                        @if($bk->pegawai?->photo)
+                        <img src="{{ asset('storage/' . $bk->pegawai->photo) }}" class="w-full h-full object-cover">
+                        @else
+                        <svg class="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"/></svg>
+                        @endif
+                    </div>
+                    <div class="min-w-0">
+                        <p class="text-xs font-semibold text-gray-800 truncate">{{ $bk->pegawai?->nama ?? $bk->nik }}</p>
+                        <p class="text-xs text-gray-500 truncate">{{ $bk->jenis?->nama ?? 'Dokumen' }}</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2 flex-shrink-0">
+                    <p class="text-xs text-gray-500">{{ $bk->tgl_kadaluarsa?->translatedFormat('d M Y') }}</p>
+                    @if($bk->status_kadaluarsa === 'kadaluarsa')
+                    <span class="px-2 py-0.5 rounded-full text-xs font-bold bg-red-100 text-red-700">Kadaluarsa</span>
+                    @elseif($bk->status_kadaluarsa === 'urgent')
+                    <span class="px-2 py-0.5 rounded-full text-xs font-bold bg-orange-100 text-orange-700 flex items-center gap-1">
+                        <span class="w-1.5 h-1.5 rounded-full bg-orange-500 animate-pulse"></span>
+                        H-{{ $bk->hari_sisa }}
+                    </span>
+                    @else
+                    <span class="px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-700">{{ $bk->hari_sisa }} hari</span>
+                    @endif
+                    @if($bk->pegawai)
+                    <a href="{{ route('karyawan.berkas.index', $bk->pegawai) }}"
+                       class="text-blue-500 hover:text-blue-700 transition" title="Buka dokumen">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+                        </svg>
+                    </a>
+                    @endif
+                </div>
+            </div>
+            @endforeach
+        </div>
+    </div>
+</div>
+@endif
+
 {{-- ═══════════════════════════════════════════════════════════════ --}}
 {{-- STATS CARDS --}}
 {{-- ═══════════════════════════════════════════════════════════════ --}}

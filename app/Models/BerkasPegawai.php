@@ -17,11 +17,24 @@ class BerkasPegawai extends Model
         'path',
         'tgl_upload',
         'keterangan',
+        'tgl_kadaluarsa',
+        'notif_aktif',
     ];
 
     protected $casts = [
-        'tgl_upload' => 'date',
+        'tgl_upload'     => 'date',
+        'tgl_kadaluarsa' => 'date',
+        'notif_aktif'    => 'boolean',
     ];
+
+    // ─── Scopes ────────────────────────────────────────────────────────────────
+
+    public function scopeAkanKadaluarsa($query, int $hari = 30)
+    {
+        return $query->where('notif_aktif', true)
+                     ->whereNotNull('tgl_kadaluarsa')
+                     ->whereDate('tgl_kadaluarsa', '<=', today()->addDays($hari));
+    }
 
     // ─── Accessors ─────────────────────────────────────────────────────────────
 
@@ -38,6 +51,23 @@ class BerkasPegawai extends Model
     public function getIsPdfAttribute(): bool
     {
         return $this->ekstensi === 'pdf';
+    }
+
+    public function getHariSisaAttribute(): ?int
+    {
+        if (!$this->tgl_kadaluarsa) return null;
+        return today()->diffInDays($this->tgl_kadaluarsa, false);
+    }
+
+    // 'kadaluarsa' | 'urgent' | 'warning' | 'aktif' | null
+    public function getStatusKadaluarsaAttribute(): ?string
+    {
+        if (!$this->tgl_kadaluarsa || !$this->notif_aktif) return null;
+        $sisa = $this->hari_sisa;
+        if ($sisa < 0) return 'kadaluarsa';
+        if ($sisa <= 7) return 'urgent';
+        if ($sisa <= 30) return 'warning';
+        return 'aktif';
     }
 
     // ─── Relasi ────────────────────────────────────────────────────────────────

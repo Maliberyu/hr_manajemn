@@ -272,11 +272,13 @@ Route::middleware(['auth', 'role:hrd,admin'])->group(function () {
                      'show'=>'show','edit'=>'edit','update'=>'update','destroy'=>'destroy']);
 
         Route::prefix('{karyawan}/berkas')->name('berkas.')->group(function () {
-            Route::get('/',               [BerkasPegawaiController::class, 'index'])->name('index');
-            Route::post('/',              [BerkasPegawaiController::class, 'store'])->name('store');
-            Route::get('/{berkas}/download',[BerkasPegawaiController::class, 'download'])->name('download');
-            Route::delete('/{berkas}',    [BerkasPegawaiController::class, 'destroy'])->name('destroy');
+            Route::get('/',                              [BerkasPegawaiController::class, 'index'])->name('index');
+            Route::post('/',                             [BerkasPegawaiController::class, 'store'])->name('store');
+            Route::get('/{berkas}/download',             [BerkasPegawaiController::class, 'download'])->name('download');
+            Route::patch('/{berkas}/kadaluarsa',         [BerkasPegawaiController::class, 'updateKadaluarsa'])->name('update-kadaluarsa');
+            Route::delete('/{berkas}',                   [BerkasPegawaiController::class, 'destroy'])->name('destroy');
         });
+        Route::post('/berkas/setting', [BerkasPegawaiController::class, 'updateSetting'])->name('berkas.setting.update');
     });
 
     // ── Absensi ────────────────────────────────────────────────────────────────

@@ -1004,6 +1004,77 @@
     </div>
 </div>
 
+{{-- ── Popup Notifikasi Berkas Kadaluarsa ──────────────────────────────────── --}}
+@if($berkasKadaluarsa->isNotEmpty())
+<div x-data="{ open: true }" x-show="open" x-cloak
+     class="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4"
+     style="background: rgba(0,0,0,0.45)">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden"
+         x-transition:enter="transition ease-out duration-200"
+         x-transition:enter-start="opacity-0 translate-y-4"
+         x-transition:enter-end="opacity-100 translate-y-0">
+
+        {{-- Header --}}
+        <div class="px-5 py-4 flex items-start gap-3
+            {{ $berkasKadaluarsa->contains(fn($b) => $b->status_kadaluarsa === 'kadaluarsa' || $b->status_kadaluarsa === 'urgent') ? 'bg-red-50 border-b border-red-100' : 'bg-amber-50 border-b border-amber-100' }}">
+            <div class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0
+                {{ $berkasKadaluarsa->contains(fn($b) => $b->status_kadaluarsa === 'kadaluarsa' || $b->status_kadaluarsa === 'urgent') ? 'bg-red-100' : 'bg-amber-100' }}">
+                <svg class="w-5 h-5 {{ $berkasKadaluarsa->contains(fn($b) => $b->status_kadaluarsa === 'kadaluarsa' || $b->status_kadaluarsa === 'urgent') ? 'text-red-600' : 'text-amber-600' }}"
+                     fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                </svg>
+            </div>
+            <div class="flex-1">
+                <p class="text-sm font-bold {{ $berkasKadaluarsa->contains(fn($b) => $b->status_kadaluarsa === 'kadaluarsa' || $b->status_kadaluarsa === 'urgent') ? 'text-red-800' : 'text-amber-800' }}">
+                    Perhatian: Dokumen Perlu Diperbarui
+                </p>
+                <p class="text-xs mt-0.5 {{ $berkasKadaluarsa->contains(fn($b) => $b->status_kadaluarsa === 'kadaluarsa' || $b->status_kadaluarsa === 'urgent') ? 'text-red-700' : 'text-amber-700' }}">
+                    {{ $berkasKadaluarsa->count() }} dokumen akan atau sudah kadaluarsa
+                </p>
+            </div>
+            <button @click="open = false" class="text-gray-400 hover:text-gray-600 transition flex-shrink-0">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+
+        {{-- Daftar berkas --}}
+        <div class="px-5 py-3 max-h-48 overflow-y-auto space-y-2">
+            @foreach($berkasKadaluarsa as $bk)
+            <div class="flex items-center justify-between gap-2 py-1.5 border-b border-gray-50 last:border-0">
+                <div class="min-w-0">
+                    <p class="text-sm font-semibold text-gray-800 truncate">{{ $bk->jenis?->nama ?? 'Dokumen' }}</p>
+                    <p class="text-xs text-gray-500">Exp: {{ $bk->tgl_kadaluarsa?->translatedFormat('d F Y') }}</p>
+                </div>
+                <div class="flex-shrink-0">
+                    @if($bk->status_kadaluarsa === 'kadaluarsa')
+                    <span class="px-2 py-0.5 rounded-full text-xs font-bold bg-red-100 text-red-700">Kadaluarsa</span>
+                    @elseif($bk->status_kadaluarsa === 'urgent')
+                    <span class="px-2 py-0.5 rounded-full text-xs font-bold bg-orange-100 text-orange-700">H-{{ $bk->hari_sisa }}</span>
+                    @else
+                    <span class="px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-700">{{ $bk->hari_sisa }} hari lagi</span>
+                    @endif
+                </div>
+            </div>
+            @endforeach
+        </div>
+
+        {{-- Actions --}}
+        <div class="px-5 py-4 border-t border-gray-100 flex gap-3">
+            <a href="{{ route('karyawan.berkas.index', auth()->user()->pegawai) }}"
+               class="flex-1 py-2.5 text-sm bg-amber-500 text-white rounded-xl font-semibold text-center hover:bg-amber-600 transition">
+                Lihat Dokumen
+            </a>
+            <button @click="open = false"
+                    class="flex-1 py-2.5 text-sm text-gray-600 bg-gray-100 rounded-xl font-semibold hover:bg-gray-200 transition">
+                Nanti Saja
+            </button>
+        </div>
+    </div>
+</div>
+@endif
+
 @endsection
 
 @push('scripts')

@@ -18,6 +18,8 @@ use App\Models\CutiLock;
 use App\Models\CutiSetting;
 use App\Models\CutiUnlockRequest;
 use App\Models\IjinKhusus;
+use App\Models\BerkasPegawai;
+use App\Models\BerkasSetting;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -226,12 +228,23 @@ class DashboardController extends Controller
             ])->sortBy('dep')->values();
         }, collect());
 
+        $hrdBerkasSetting    = $this->safe(fn() => BerkasSetting::get(), new BerkasSetting(['hari_notif_1' => 30, 'hari_notif_2' => 7]));
+        $hrdBerkasKadaluarsa = $this->safe(
+            fn() => BerkasPegawai::with(['jenis', 'pegawai'])
+                ->akanKadaluarsa($hrdBerkasSetting->hari_notif_1)
+                ->when($isAtasan && $nikBawahan, fn($q) => $q->whereIn('nik', $nikBawahan))
+                ->orderBy('tgl_kadaluarsa')
+                ->get(),
+            collect()
+        );
+
         return view('dashboard', compact(
             'stats', 'absensiHariIni', 'cutiTerbaru',
             'lemburMenunggu', 'ultah', 'grafikAbsensi',
             'pegawaiBelumAdaAtasan', 'isAtasan', 'nikBawahan',
             'grafikRekapAbsensi', 'grafikRekapCuti', 'grafikRekapIjin', 'grafikRekapPelatihan',
-            'departemen', 'rekapDep', 'bulanRekap', 'tahunRekap'
+            'departemen', 'rekapDep', 'bulanRekap', 'tahunRekap',
+            'hrdBerkasKadaluarsa', 'hrdBerkasSetting'
         ));
     }
 
@@ -341,11 +354,22 @@ class DashboardController extends Controller
             collect()
         );
 
+        $berkasSetting      = $this->safe(fn() => BerkasSetting::get(), new BerkasSetting(['hari_notif_1' => 30, 'hari_notif_2' => 7]));
+        $berkasKadaluarsa   = $this->safe(
+            fn() => BerkasPegawai::where('nik', $pegawai->nik)
+                ->with('jenis')
+                ->akanKadaluarsa($berkasSetting->hari_notif_1)
+                ->orderBy('tgl_kadaluarsa')
+                ->get(),
+            collect()
+        );
+
         return view('ess.dashboard', compact(
             'pegawai', 'absensiHariIni', 'cutiSaya', 'sisaCuti', 'pegawaiPj',
             'trainingIHT', 'trainingEksternal', 'expiringSoon', 'slipGaji',
             'ijinSaya', 'ijinKhususSaya', 'lemburSaya', 'tarifLembur',
-            'lock', 'setting', 'unlockReqSaya'
+            'lock', 'setting', 'unlockReqSaya',
+            'berkasKadaluarsa', 'berkasSetting'
         ));
     }
 
