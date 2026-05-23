@@ -369,14 +369,14 @@
     <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
         <div>
             <h2 class="text-sm font-bold text-gray-800">Rekap SDM</h2>
-            <p class="text-xs text-gray-400">
+            <p class="text-xs text-gray-400" id="rekapPeriodLabel">
                 {{ $periodLabel }}
                 @if($rekapDep)
                 · {{ $departemen->firstWhere('dep_id', $rekapDep)?->nama }}
                 @endif
             </p>
         </div>
-        <form method="GET" action="{{ route('dashboard') }}" class="flex flex-wrap items-center gap-2">
+        <form id="filterRekapForm" class="flex flex-wrap items-center gap-2">
 
             {{-- Dari tanggal --}}
             <div class="flex items-center gap-1">
@@ -438,15 +438,15 @@
                 <div>
                     <p class="text-[10px] font-semibold text-blue-500 uppercase tracking-widest">Kehadiran</p>
                     <h3 class="text-sm font-bold text-gray-800 mt-0.5">Per Departemen</h3>
-                    <p class="text-xs text-gray-400 mt-0.5">{{ $periodLabel }}</p>
+                    <p class="text-xs text-gray-400 mt-0.5" id="kpiAbsensiPeriod">{{ $periodLabel }}</p>
                 </div>
                 <div class="text-right">
-                    <p class="text-2xl font-extrabold text-gray-900 leading-none">{{ $kpiHadir ?: '—' }}</p>
+                    <p class="text-2xl font-extrabold text-gray-900 leading-none" id="kpiHadir">{{ $kpiHadir ?: '—' }}</p>
                     <p class="text-[10px] text-gray-400 mt-0.5">total hadir</p>
                     <div class="flex items-center gap-1.5 mt-1.5 justify-end">
-                        <span class="text-[10px] text-amber-600 font-medium">{{ $kpiSakit }} sakit</span>
+                        <span class="text-[10px] text-amber-600 font-medium" id="kpiSakit">{{ $kpiSakit }} sakit</span>
                         <span class="text-gray-300">·</span>
-                        <span class="text-[10px] text-red-500 font-medium">{{ $kpiAlfa }} alfa</span>
+                        <span class="text-[10px] text-red-500 font-medium" id="kpiAlfa">{{ $kpiAlfa }} alfa</span>
                     </div>
                 </div>
             </div>
@@ -482,7 +482,7 @@
                     <p class="text-xs text-gray-400 mt-0.5">Tahun {{ $tahunRekap }} · IHT + Eksternal</p>
                 </div>
                 <div class="text-right">
-                    <p class="text-2xl font-extrabold text-gray-900 leading-none">{{ $kpiJamTrain > 0 ? number_format($kpiJamTrain, 0) : '—' }}</p>
+                    <p class="text-2xl font-extrabold text-gray-900 leading-none" id="kpiJamTrain">{{ $kpiJamTrain > 0 ? number_format($kpiJamTrain, 0) : '—' }}</p>
                     <p class="text-[10px] text-gray-400 mt-0.5">total jam</p>
                 </div>
             </div>
@@ -516,9 +516,9 @@
                     <p class="text-xs text-gray-400 mt-0.5">Tahun {{ $tahunRekap }}</p>
                 </div>
                 <div class="text-right">
-                    <p class="text-2xl font-extrabold text-gray-900 leading-none">{{ $kpiHariCuti ?: '—' }}</p>
+                    <p class="text-2xl font-extrabold text-gray-900 leading-none" id="kpiHariCuti">{{ $kpiHariCuti ?: '—' }}</p>
                     <p class="text-[10px] text-gray-400 mt-0.5">total hari</p>
-                    <p class="text-[10px] text-amber-600 mt-1 font-medium">
+                    <p class="text-[10px] text-amber-600 mt-1 font-medium" id="kpiJumlahCuti">
                         {{ $grafikRekapCuti->sum('jumlah') }} pengajuan
                     </p>
                 </div>
@@ -556,7 +556,7 @@
                     <p class="text-xs text-gray-400 mt-0.5">{{ $periodLabel }}</p>
                 </div>
                 <div class="text-right">
-                    <p class="text-2xl font-extrabold text-gray-900 leading-none">{{ $kpiIjin ?: '—' }}</p>
+                    <p class="text-2xl font-extrabold text-gray-900 leading-none" id="kpiIjin">{{ $kpiIjin ?: '—' }}</p>
                     <p class="text-[10px] text-gray-400 mt-0.5">total pengajuan</p>
                 </div>
             </div>
@@ -568,8 +568,7 @@
             <div class="px-5 py-3 border-t border-gray-50 flex items-center justify-between">
                 <div class="flex flex-wrap gap-x-3 gap-y-1">
                     <span class="flex items-center gap-1 text-[10px] text-gray-500"><span class="w-2.5 h-2.5 rounded-sm bg-amber-400 inline-block"></span>Ijin Sakit</span>
-                    <span class="flex items-center gap-1 text-[10px] text-gray-500"><span class="w-2.5 h-2.5 rounded-sm bg-orange-400 inline-block"></span>Ijin Terlambat</span>
-                    <span class="flex items-center gap-1 text-[10px] text-gray-500"><span class="w-2.5 h-2.5 rounded-sm bg-violet-400 inline-block"></span>Pulang Duluan</span>
+                    <span class="flex items-center gap-1 text-[10px] text-gray-500"><span class="w-2.5 h-2.5 rounded-sm bg-orange-500 inline-block"></span>Ijin Khusus</span>
                 </div>
                 <a href="{{ route('ijin.rekap', ['bulan'=>$bulanRekap,'tahun'=>$tahunRekap]) }}"
                    class="text-xs text-orange-600 hover:text-orange-800 font-medium flex items-center gap-1 whitespace-nowrap">
@@ -704,128 +703,184 @@ const tip = {
     bodyFont: { size: 11 },
 };
 
-// ─── Chart 1: Kehadiran per Departemen ───────────────────────────────────
+// ─── Simpan instance chart agar bisa diupdate via AJAX ───────────────────
+let chartAbsensi = null, chartPelatihan = null, chartCuti = null, chartIjin = null;
+const cutiPalette = ['#3b82f6','#10b981','#f59e0b','#ef4444','#8b5cf6','#f97316'];
+const ijinColorMap = { sakit: '#fbbf24', khusus: '#f97316' };
+
+function buildAbsensi(raw) {
+    return {
+        labels:   raw.length ? raw.map(d => d.dep) : ['—'],
+        datasets: [
+            { label:'Hadir',     data: raw.map(d=>d.hadir),     backgroundColor:'#3b82f6', borderRadius:4, borderSkipped:false },
+            { label:'Sakit',     data: raw.map(d=>d.sakit),     backgroundColor:'#fbbf24', borderRadius:4, borderSkipped:false },
+            { label:'Ijin',      data: raw.map(d=>d.izin),      backgroundColor:'#a78bfa', borderRadius:4, borderSkipped:false },
+            { label:'Alfa',      data: raw.map(d=>d.alfa),      backgroundColor:'#f87171', borderRadius:4, borderSkipped:false },
+            { label:'Terlambat', data: raw.map(d=>d.terlambat), backgroundColor:'#fb923c', borderRadius:4, borderSkipped:false },
+        ]
+    };
+}
+
+function buildPelatihan(raw) {
+    return {
+        labels:   raw.length ? raw.map(d=>d.dep) : ['—'],
+        datasets: [
+            { label:'IHT',       data:raw.map(d=>d.jam_iht),       backgroundColor:'#6366f1', stack:'j', borderRadius:4, borderSkipped:false },
+            { label:'Eksternal', data:raw.map(d=>d.jam_eksternal), backgroundColor:'#10b981', stack:'j', borderRadius:4, borderSkipped:false },
+        ]
+    };
+}
+
+function buildCuti(raw) {
+    return {
+        labels:   raw.length ? raw.map(d=>d.jenis) : ['—'],
+        datasets: [{ data: raw.length ? raw.map(d=>d.total_hari):[0], backgroundColor: raw.length ? cutiPalette.slice(0,raw.length):['#e2e8f0'], borderColor:'#fff', borderWidth:3, hoverOffset:8 }]
+    };
+}
+
+function buildIjin(raw) {
+    return {
+        labels:   raw.length ? raw.map(d=>d.jenis) : ['—'],
+        datasets: [{ label:'Pengajuan', data: raw.length ? raw.map(d=>d.jumlah):[0], backgroundColor: raw.length ? raw.map(d=>ijinColorMap[d.key]??'#6366f1'):['#e2e8f0'], borderRadius:8, borderSkipped:false, barThickness:40 }]
+    };
+}
+
+// Inisialisasi semua chart dari data server-side (halaman pertama kali load)
 const ctxAbsensi = document.getElementById('chartRekapAbsensi');
 if (ctxAbsensi) {
-    const raw = @json($grafikRekapAbsensi);
-    new Chart(ctxAbsensi, {
-        type: 'bar',
-        plugins: [noDataPlugin],
-        data: {
-            labels: raw.length ? raw.map(d => d.dep) : ['—'],
-            datasets: [
-                { label: 'Hadir',     data: raw.map(d => d.hadir),     backgroundColor: '#3b82f6', borderRadius: 4, borderSkipped: false },
-                { label: 'Sakit',     data: raw.map(d => d.sakit),     backgroundColor: '#fbbf24', borderRadius: 4, borderSkipped: false },
-                { label: 'Ijin',      data: raw.map(d => d.izin),      backgroundColor: '#a78bfa', borderRadius: 4, borderSkipped: false },
-                { label: 'Alfa',      data: raw.map(d => d.alfa),      backgroundColor: '#f87171', borderRadius: 4, borderSkipped: false },
-                { label: 'Terlambat', data: raw.map(d => d.terlambat), backgroundColor: '#fb923c', borderRadius: 4, borderSkipped: false },
-            ]
-        },
+    chartAbsensi = new Chart(ctxAbsensi, {
+        type: 'bar', plugins: [noDataPlugin],
+        data: buildAbsensi(@json($grafikRekapAbsensi)),
         options: {
-            responsive: true, maintainAspectRatio: false,
-            plugins: { legend: { display: false }, tooltip: { ...tip, mode: 'index', intersect: false } },
+            responsive:true, maintainAspectRatio:false,
+            plugins: { legend:{display:false}, tooltip:{...tip, mode:'index', intersect:false} },
             scales: {
-                x: { grid: { display: false }, ticks: { font: { size: 10 }, color: '#94a3b8', maxRotation: 30 } },
-                y: { beginAtZero: true, grid: { color: '#f1f5f9' }, ticks: { font: { size: 10 }, color: '#94a3b8', stepSize: 1 } }
+                x: { grid:{display:false}, ticks:{font:{size:10},color:'#94a3b8',maxRotation:30} },
+                y: { beginAtZero:true, grid:{color:'#f1f5f9'}, ticks:{font:{size:10},color:'#94a3b8',stepSize:1} }
             },
-            animation: { duration: 700, easing: 'easeOutQuart' }
+            animation: { duration:700, easing:'easeOutQuart' }
         }
     });
 }
 
-// ─── Chart 2: Jam Pelatihan per Departemen ────────────────────────────────
 const ctxPelatihan = document.getElementById('chartRekapPelatihan');
 if (ctxPelatihan) {
-    const raw = @json($grafikRekapPelatihan);
-    new Chart(ctxPelatihan, {
-        type: 'bar',
-        plugins: [noDataPlugin],
-        data: {
-            labels: raw.length ? raw.map(d => d.dep) : ['—'],
-            datasets: [
-                { label: 'IHT',       data: raw.map(d => d.jam_iht),       backgroundColor: '#6366f1', stack: 'j', borderRadius: 4, borderSkipped: false },
-                { label: 'Eksternal', data: raw.map(d => d.jam_eksternal), backgroundColor: '#10b981', stack: 'j', borderRadius: 4, borderSkipped: false },
-            ]
-        },
+    chartPelatihan = new Chart(ctxPelatihan, {
+        type:'bar', plugins:[noDataPlugin],
+        data: buildPelatihan(@json($grafikRekapPelatihan)),
         options: {
-            responsive: true, maintainAspectRatio: false,
-            plugins: {
-                legend: { display: false },
-                tooltip: { ...tip, mode: 'index', intersect: false, callbacks: { label: c => ` ${c.dataset.label}: ${c.parsed.y.toFixed(1)} jam` } }
-            },
+            responsive:true, maintainAspectRatio:false,
+            plugins: { legend:{display:false}, tooltip:{...tip, mode:'index', intersect:false, callbacks:{label:c=>` ${c.dataset.label}: ${c.parsed.y.toFixed(1)} jam`}} },
             scales: {
-                x: { stacked: true, grid: { display: false }, ticks: { font: { size: 10 }, color: '#94a3b8', maxRotation: 30 } },
-                y: { stacked: true, beginAtZero: true, grid: { color: '#f1f5f9' }, ticks: { font: { size: 10 }, color: '#94a3b8', callback: v => v + 'j' } }
+                x: { stacked:true, grid:{display:false}, ticks:{font:{size:10},color:'#94a3b8',maxRotation:30} },
+                y: { stacked:true, beginAtZero:true, grid:{color:'#f1f5f9'}, ticks:{font:{size:10},color:'#94a3b8',callback:v=>v+'j'} }
             },
-            animation: { duration: 700, easing: 'easeOutQuart' }
+            animation: { duration:700, easing:'easeOutQuart' }
         }
     });
 }
 
-// ─── Chart 3: Cuti per Jenis ──────────────────────────────────────────────
 const ctxCuti = document.getElementById('chartRekapCuti');
 if (ctxCuti) {
-    const raw = @json($grafikRekapCuti);
-    const palette = ['#3b82f6','#10b981','#f59e0b','#ef4444','#8b5cf6','#f97316'];
-    new Chart(ctxCuti, {
-        type: 'doughnut',
-        plugins: [noDataPlugin],
-        data: {
-            labels: raw.length ? raw.map(d => d.jenis) : ['—'],
-            datasets: [{
-                data: raw.length ? raw.map(d => d.total_hari) : [0],
-                backgroundColor: raw.length ? palette.slice(0, raw.length) : ['#e2e8f0'],
-                borderColor: '#fff',
-                borderWidth: 3,
-                hoverOffset: 8,
-            }]
-        },
+    const rawCuti = @json($grafikRekapCuti);
+    chartCuti = new Chart(ctxCuti, {
+        type:'doughnut', plugins:[noDataPlugin],
+        data: buildCuti(rawCuti),
         options: {
-            responsive: true, maintainAspectRatio: false,
-            cutout: '65%',
-            plugins: {
-                legend: { display: false },
-                tooltip: {
-                    ...tip,
-                    callbacks: { label: c => ` ${c.label}: ${c.parsed} hari (${raw[c.dataIndex]?.jumlah ?? 0}x)` }
-                }
-            },
-            animation: { animateRotate: true, duration: 800, easing: 'easeOutQuart' }
+            responsive:true, maintainAspectRatio:false, cutout:'65%',
+            plugins: { legend:{display:false}, tooltip:{...tip, callbacks:{label:c=>` ${c.label}: ${c.parsed} hari (${rawCuti[c.dataIndex]?.jumlah??0}x)`}} },
+            animation: { animateRotate:true, duration:800, easing:'easeOutQuart' }
         }
     });
 }
 
-// ─── Chart 4: Ijin per Jenis ──────────────────────────────────────────────
 const ctxIjin = document.getElementById('chartRekapIjin');
 if (ctxIjin) {
-    const raw = @json($grafikRekapIjin);
-    const colorMap = { sakit: '#fbbf24', terlambat: '#fb923c', pulang_duluan: '#a78bfa' };
-    new Chart(ctxIjin, {
-        type: 'bar',
-        plugins: [noDataPlugin],
-        data: {
-            labels: raw.length ? raw.map(d => d.jenis) : ['—'],
-            datasets: [{
-                label: 'Pengajuan',
-                data: raw.length ? raw.map(d => d.jumlah) : [0],
-                backgroundColor: raw.length ? raw.map(d => colorMap[d.key] ?? '#6366f1') : ['#e2e8f0'],
-                borderRadius: 8,
-                borderSkipped: false,
-                barThickness: 40,
-            }]
-        },
+    chartIjin = new Chart(ctxIjin, {
+        type:'bar', plugins:[noDataPlugin],
+        data: buildIjin(@json($grafikRekapIjin)),
         options: {
-            indexAxis: 'y',
-            responsive: true, maintainAspectRatio: false,
-            plugins: {
-                legend: { display: false },
-                tooltip: { ...tip, callbacks: { label: c => ` ${c.parsed.x} pengajuan` } }
-            },
+            indexAxis:'y', responsive:true, maintainAspectRatio:false,
+            plugins: { legend:{display:false}, tooltip:{...tip, callbacks:{label:c=>` ${c.parsed.x} pengajuan`}} },
             scales: {
-                x: { beginAtZero: true, grid: { color: '#f1f5f9' }, ticks: { font: { size: 11 }, color: '#94a3b8', stepSize: 1 } },
-                y: { grid: { display: false }, ticks: { font: { size: 11 }, color: '#374151' } }
+                x: { beginAtZero:true, grid:{color:'#f1f5f9'}, ticks:{font:{size:11},color:'#94a3b8',stepSize:1} },
+                y: { grid:{display:false}, ticks:{font:{size:11},color:'#374151'} }
             },
-            animation: { duration: 700, easing: 'easeOutQuart' }
+            animation: { duration:700, easing:'easeOutQuart' }
+        }
+    });
+}
+
+// ─── Fungsi update semua chart dari data AJAX ────────────────────────────
+function updateAllCharts(data) {
+    // Update chart Absensi
+    if (chartAbsensi) {
+        const d = buildAbsensi(data.absensi);
+        chartAbsensi.data.labels = d.labels;
+        d.datasets.forEach((ds, i) => { chartAbsensi.data.datasets[i].data = ds.data; });
+        chartAbsensi.update('active');
+    }
+    // Update chart Pelatihan
+    if (chartPelatihan) {
+        const d = buildPelatihan(data.pelatihan);
+        chartPelatihan.data.labels = d.labels;
+        d.datasets.forEach((ds, i) => { chartPelatihan.data.datasets[i].data = ds.data; });
+        chartPelatihan.update('active');
+    }
+    // Update chart Cuti (doughnut — perlu update labels + bg colors)
+    if (chartCuti) {
+        const d = buildCuti(data.cuti);
+        chartCuti.data.labels = d.labels;
+        chartCuti.data.datasets[0].data = d.datasets[0].data;
+        chartCuti.data.datasets[0].backgroundColor = d.datasets[0].backgroundColor;
+        // Update tooltip closure dengan data baru
+        chartCuti.options.plugins.tooltip.callbacks.label = c => ` ${c.label}: ${c.parsed} hari (${data.cuti[c.dataIndex]?.jumlah??0}x)`;
+        chartCuti.update('active');
+    }
+    // Update chart Ijin
+    if (chartIjin) {
+        const d = buildIjin(data.ijin);
+        chartIjin.data.labels = d.labels;
+        chartIjin.data.datasets[0].data = d.datasets[0].data;
+        chartIjin.data.datasets[0].backgroundColor = d.datasets[0].backgroundColor;
+        chartIjin.update('active');
+    }
+    // Update KPI numbers
+    const k = data.kpi;
+    const set = (id, val) => { const el=document.getElementById(id); if(el) el.textContent=val; };
+    set('kpiHadir',    k.hadir     || '—');
+    set('kpiSakit',    k.sakit + ' sakit');
+    set('kpiAlfa',     k.alfa  + ' alfa');
+    set('kpiJamTrain', k.jam_train > 0 ? Math.round(k.jam_train).toLocaleString() : '—');
+    set('kpiHariCuti', k.hari_cuti  || '—');
+    set('kpiJumlahCuti', k.jumlah_cuti + ' pengajuan');
+    set('kpiIjin',     k.ijin       || '—');
+    // Update period labels
+    set('rekapPeriodLabel',  data.period_label);
+    set('kpiAbsensiPeriod',  data.period_label);
+}
+
+// ─── AJAX submit filter rekap (reload chart saja, bukan full-page) ───────
+const filterRekapForm = document.getElementById('filterRekapForm');
+if (filterRekapForm) {
+    // Spinner element
+    const btnTampilkan = filterRekapForm.querySelector('button[type="submit"]');
+
+    filterRekapForm.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const params = new URLSearchParams(new FormData(filterRekapForm));
+        if (btnTampilkan) { btnTampilkan.disabled = true; btnTampilkan.textContent = '...'; }
+        try {
+            const res = await fetch('{{ parse_url(route("dashboard.rekap-data"), PHP_URL_PATH) }}?' + params.toString(), {
+                headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+            });
+            if (!res.ok) throw new Error('Server error');
+            const data = await res.json();
+            updateAllCharts(data);
+        } catch(err) {
+            console.error('Rekap fetch error:', err);
+        } finally {
+            if (btnTampilkan) { btnTampilkan.disabled = false; btnTampilkan.textContent = 'Tampilkan'; }
         }
     });
 }

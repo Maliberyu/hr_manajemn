@@ -65,7 +65,8 @@ Route::get('/register/cari-pegawai', [RegisterController::class, 'searchPegawai'
 Route::middleware(['auth'])->group(function () {
 
     // ── Dashboard — controller yang handle redirect per role ───────────────────
-    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/dashboard',           [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/dashboard/rekap-data',[DashboardController::class, 'rekapData'])->name('dashboard.rekap-data');
 
     // ── Profil User ────────────────────────────────────────────────────────────
     Route::get('/profil',                  [ProfileController::class, 'show'])->name('profil.show');
