@@ -127,8 +127,11 @@
                     @endforeach
                     <div class="mt-2 p-3 bg-blue-50 border border-blue-100 rounded-xl">
                         <p class="text-xs text-blue-700">
-                            <strong>Prioritas:</strong> Departemen dengan tarif di tabel kanan → pakai tarif itu.
-                            Departemen tanpa tarif → otomatis hitung <code class="bg-blue-100 px-1 rounded">Gaji Pokok ÷ 173</code>.
+                            <strong>Prioritas otomatis:</strong>
+                            <strong class="text-green-700">① Tarif Dept</strong> →
+                            <strong class="text-blue-700">② Tarif Pendidikan</strong> →
+                            <strong class="text-gray-600">③ Gaji Pokok ÷ 173</strong>.
+                            Setting formula di atas menentukan label, bukan memblokir override.
                         </p>
                     </div>
                 </div>
@@ -169,16 +172,18 @@
         </div>
     </div>
 
-    {{-- ── Panel Kanan: Tarif per Departemen ──────────────────────────────────── --}}
-    <div>
-        <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden h-full">
+    {{-- ── Panel Kanan: Tarif per Departemen + Tarif per Pendidikan ──────────── --}}
+    <div class="space-y-4">
+
+        {{-- Tarif per Departemen --}}
+        <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
             <div class="px-5 py-4 border-b border-gray-100">
                 <h3 class="text-sm font-semibold text-gray-800">Tarif Override per Departemen</h3>
                 <p class="text-xs text-gray-400 mt-0.5">
-                    Isi jika dept punya tarif khusus (IGD, ICU, OK dll). <strong>0 = auto formula Gaji Pokok ÷ 173</strong>.
+                    Isi jika dept punya tarif khusus (IGD, ICU, OK dll). <strong>0 = ikuti prioritas berikutnya</strong>.
                 </p>
             </div>
-            <div class="overflow-y-auto max-h-[600px]">
+            <div class="overflow-y-auto max-h-[380px]">
                 <table class="w-full text-sm">
                     <thead class="sticky top-0">
                         <tr class="border-b border-gray-100 bg-gray-50/90 backdrop-blur-sm">
@@ -216,6 +221,68 @@
                 </table>
             </div>
         </div>
+
+        {{-- Tarif per Pendidikan --}}
+        <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+            <div class="px-5 py-4 border-b border-gray-100">
+                <h3 class="text-sm font-semibold text-gray-800">Tarif per Jenjang Pendidikan</h3>
+                <p class="text-xs text-gray-400 mt-0.5">
+                    Berlaku jika dept tidak punya tarif khusus di atas. <strong>0 = hitung Gaji Pokok ÷ 173</strong>.
+                </p>
+            </div>
+            <div class="overflow-hidden">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="border-b border-gray-100 bg-gray-50">
+                            <th class="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">Jenjang</th>
+                            <th class="text-center px-3 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">HB (Rp/jam)</th>
+                            <th class="text-center px-3 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">HR (Rp/jam)</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-50">
+                        @foreach($tarifPendidikan as $i => $tp)
+                        <tr class="hover:bg-gray-50/40">
+                            <td class="px-4 py-3">
+                                <input type="hidden" name="tarif_pend[{{ $i }}][pendidikan]" value="{{ $tp->pendidikan }}">
+                                <p class="font-semibold text-gray-800 text-xs">{{ $tp->pendidikan }}</p>
+                                @if($tp->label)
+                                <p class="text-xs text-gray-400">{{ $tp->label }}</p>
+                                @endif
+                            </td>
+                            <td class="px-3 py-3">
+                                <input type="number" name="tarif_pend[{{ $i }}][hb]"
+                                       min="0" step="500"
+                                       value="{{ $tp->tarif_hb > 0 ? (int)$tp->tarif_hb : '' }}"
+                                       placeholder="auto"
+                                       class="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-xs text-right focus:outline-none focus:ring-2 focus:ring-blue-300 {{ $tp->tarif_hb > 0 ? 'font-semibold text-blue-700' : 'text-gray-400' }}">
+                            </td>
+                            <td class="px-3 py-3">
+                                <input type="number" name="tarif_pend[{{ $i }}][hr]"
+                                       min="0" step="500"
+                                       value="{{ $tp->tarif_hr > 0 ? (int)$tp->tarif_hr : '' }}"
+                                       placeholder="auto"
+                                       class="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-xs text-right focus:outline-none focus:ring-2 focus:ring-blue-300 {{ $tp->tarif_hr > 0 ? 'font-semibold text-orange-700' : 'text-gray-400' }}">
+                            </td>
+                        </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+            {{-- Prioritas info --}}
+            <div class="px-5 py-3 border-t border-gray-100 bg-blue-50/60">
+                <p class="text-xs text-blue-700">
+                    <strong>Urutan prioritas:</strong>
+                    <span class="inline-flex items-center gap-1 ml-1">
+                        <span class="bg-green-100 text-green-700 px-1.5 py-0.5 rounded font-semibold">1. Tarif Dept</span>
+                        <span class="text-gray-400">→</span>
+                        <span class="bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-semibold">2. Tarif Pendidikan</span>
+                        <span class="text-gray-400">→</span>
+                        <span class="bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded font-semibold">3. Gapok ÷ 173</span>
+                    </span>
+                </p>
+            </div>
+        </div>
+
     </div>
 
 </div>

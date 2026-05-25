@@ -27,8 +27,9 @@ class LemburSetting extends Model
     ];
 
     const FORMULA = [
-        'gapok_173'  => 'Gaji Pokok ÷ 173',
-        'tarif_dept' => 'Tarif per Departemen',
+        'gapok_173'        => 'Gaji Pokok ÷ 173',
+        'tarif_dept'       => 'Tarif per Departemen',
+        'tarif_pendidikan' => 'Tarif per Pendidikan',
     ];
 
     public static function get(): static

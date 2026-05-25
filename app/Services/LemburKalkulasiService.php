@@ -8,6 +8,7 @@ use App\Models\LemburSetting;
 use App\Models\Pegawai;
 use App\Models\ShiftMaster;
 use App\Models\TarifLembur;
+use App\Models\TarifLemburPendidikan;
 use Carbon\Carbon;
 
 class LemburKalkulasiService
@@ -149,23 +150,23 @@ class LemburKalkulasiService
         ];
     }
 
-    /** Hitung upah per jam: cek tarif dept dulu, fallback ke gapok/173 */
+    /**
+     * Hitung upah per jam.
+     * Prioritas: tarif dept (jika > 0) → tarif pendidikan (jika > 0) → gapok ÷ 173
+     */
     public function hitungUpahPerJam(Pegawai $pegawai, string $jenis = 'HB'): float
     {
-        if ($this->setting->formula_upah_jam === 'tarif_dept') {
-            $tarif = TarifLembur::getForDep($pegawai->departemen);
-            if ($tarif) {
-                return (float) ($jenis === 'HR' ? $tarif->tarif_hr : $tarif->tarif_hb);
-            }
-        }
+        // 1. Tarif per departemen (selalu prioritas tertinggi jika diisi)
+        $tarifDept = TarifLembur::getForDep($pegawai->departemen);
+        $nilaiDept = $tarifDept ? (float) ($jenis === 'HR' ? $tarifDept->tarif_hr : $tarifDept->tarif_hb) : 0;
+        if ($nilaiDept > 0) return $nilaiDept;
 
-        // Fallback: cek tarif dept apapun formula-nya (override)
-        $tarif = TarifLembur::getForDep($pegawai->departemen);
-        if ($tarif && ($jenis === 'HR' ? $tarif->tarif_hr : $tarif->tarif_hb) > 0) {
-            return (float) ($jenis === 'HR' ? $tarif->tarif_hr : $tarif->tarif_hb);
-        }
+        // 2. Tarif per pendidikan
+        $tarifPend = TarifLemburPendidikan::getForPendidikan($pegawai->pendidikan ?? null);
+        $nilaiPend = $tarifPend ? (float) ($jenis === 'HR' ? $tarifPend->tarif_hr : $tarifPend->tarif_hb) : 0;
+        if ($nilaiPend > 0) return $nilaiPend;
 
-        // gapok / 173
+        // 3. Gaji Pokok ÷ 173
         $gapok = (float) ($pegawai->gapok ?? 0);
         return $gapok > 0 ? round($gapok / 173, 0) : 0;
     }

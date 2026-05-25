@@ -10,6 +10,7 @@ use App\Models\Pegawai;
 use App\Models\AtasanPegawai;
 use App\Models\User;
 use App\Models\TarifLembur;
+use App\Models\TarifLemburPendidikan;
 use App\Models\HrNotification;
 use App\Models\SlipGaji;
 use App\Models\SlipKomponen;
@@ -475,11 +476,12 @@ class LemburController extends Controller
 
     public function setting()
     {
-        $setting    = LemburSetting::get();
-        $departemen = Departemen::orderBy('nama')->get();
-        $tarifMap   = TarifLembur::all()->keyBy('dep_id');
+        $setting          = LemburSetting::get();
+        $departemen       = Departemen::orderBy('nama')->get();
+        $tarifMap         = TarifLembur::all()->keyBy('dep_id');
+        $tarifPendidikan  = TarifLemburPendidikan::orderBy('pendidikan')->get();
 
-        return view('lembur.setting', compact('setting', 'departemen', 'tarifMap'));
+        return view('lembur.setting', compact('setting', 'departemen', 'tarifMap', 'tarifPendidikan'));
     }
 
     public function updateSetting(Request $request)
@@ -516,6 +518,21 @@ class LemburController extends Controller
             foreach ($request->tarif as $row) {
                 TarifLembur::updateOrCreate(
                     ['dep_id' => $row['dep_id']],
+                    ['tarif_hb' => $row['hb'], 'tarif_hr' => $row['hr']]
+                );
+            }
+        }
+
+        // ── Update tarif per pendidikan ────────────────────────────────────────
+        if ($request->has('tarif_pend')) {
+            $request->validate([
+                'tarif_pend.*.pendidikan' => 'required|string|max:20',
+                'tarif_pend.*.hb'         => 'required|numeric|min:0',
+                'tarif_pend.*.hr'         => 'required|numeric|min:0',
+            ]);
+            foreach ($request->tarif_pend as $row) {
+                TarifLemburPendidikan::updateOrCreate(
+                    ['pendidikan' => $row['pendidikan']],
                     ['tarif_hb' => $row['hb'], 'tarif_hr' => $row['hr']]
                 );
             }
