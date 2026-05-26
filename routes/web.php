@@ -39,6 +39,7 @@ use App\Http\Controllers\Shift\ShiftMasterController;
 use App\Http\Controllers\Shift\TukarShiftController;
 use App\Http\Controllers\Shift\DoubleShiftController;
 use App\Http\Controllers\Shift\JadwalRealisasiController;
+use App\Http\Controllers\Ess\EssBerkasController;
 
 // ─── Redirect root ──────────────────────────────────────────────────────────────
 Route::get('/', fn() => redirect()->route('dashboard'));
@@ -84,6 +85,15 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/ess/lembur',    [DashboardController::class, 'essStoreLembur'])->name('ess.lembur.store');
     Route::post('/ess/ijin/{jenis}', [DashboardController::class, 'essStoreIjin'])->name('ess.ijin.store');
     Route::get('/ess/payroll/{slip}/pdf', [DashboardController::class, 'essSlipPdf'])->name('ess.payroll.pdf');
+
+    // ── ESS Berkas (self-service upload dokumen pribadi) ──────────────────────
+    Route::prefix('ess/berkas')->name('ess.berkas.')->middleware('feature:ess_berkas')->group(function () {
+        Route::get('/',                    [EssBerkasController::class, 'index'])->name('index');
+        Route::post('/',                   [EssBerkasController::class, 'store'])->name('store');
+        Route::get('/{berkas}/download',       [EssBerkasController::class, 'download'])->name('download')->where('berkas', '[0-9]+');
+        Route::patch('/{berkas}/kadaluarsa',  [EssBerkasController::class, 'updateKadaluarsa'])->name('kadaluarsa')->where('berkas', '[0-9]+');
+        Route::delete('/{berkas}',            [EssBerkasController::class, 'destroy'])->name('destroy')->where('berkas', '[0-9]+');
+    });
 
     // ── Notifikasi ─────────────────────────────────────────────────────────────
     Route::prefix('notifikasi')->name('notifikasi.')->group(function () {

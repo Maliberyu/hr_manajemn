@@ -268,6 +268,7 @@
     {!! navLink('Double Shift', 'double-shift.index', 'M13 10V3L4 14h7v7l9-11h-7z', 0, 'double-shift') !!}
     {!! navLink('Jadwal Saya', 'shift.realisasi.index', 'M4 6h16M4 10h16M4 14h16M4 18h16', 0, 'shift.realisasi') !!}
     {!! navLink('Training Eksternal', 'training.eksternal.index', $trainingIcon, 0, 'training') !!}
+    {!! navLink('Dokumen Saya', 'ess.berkas.index', 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z', 0, 'ess_berkas') !!}
     @php
         $slipKaryawan = 0;
         try { $slipKaryawan = \App\Models\SlipGaji::where('pegawai_id', auth()->user()->pegawai?->id)->final()->count(); } catch(\Throwable $e) {}
@@ -325,6 +326,7 @@
     </div>
     {!! navLink('Lembur', 'lembur.index', 'M13 10V3L4 14h7v7l9-11h-7z', $badgeLembur, 'lembur') !!}
     {!! navLink('Training Eksternal', 'training.eksternal.index', $trainingIcon, $badgeEksternal, 'training') !!}
+    {!! navLink('Dokumen Saya', 'ess.berkas.index', 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z', 0, 'ess_berkas') !!}
 
     {{-- Permintaan SDM (atasan bisa ajukan & lihat status) --}}
     @if(config('features.rekrutmen', true))
