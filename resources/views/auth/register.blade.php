@@ -99,7 +99,7 @@
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
                         </svg>
                         Hubungkan ke Data Pegawai 
-                        <span class="text-xs text-gray-400 font-normal">(opsional)</span>
+                        <span class="text-xs text-gray-400 font-normal">(Wajib)</span>
                     </span>
                     <span x-show="selectedPegawai" class="text-xs text-green-600 font-semibold" x-text="selectedPegawai?.nama"></span>
                     <svg class="w-4 h-4 text-gray-400 transition-transform" :class="showPegawai ? 'rotate-180' : ''"
@@ -173,7 +173,7 @@
                         <span class="text-xs text-gray-400 font-normal">(opsional)</span>
                     </p>
                 </div>
-                <div class="px-4 py-3" x-data="{ searchAtasan: '', openAtasan: false }">
+                <!-- <div class="px-4 py-3" x-data="{ searchAtasan: '', openAtasan: false }">
                     <div class="relative">
                         <input type="text" x-model="searchAtasan"
                                @focus="openAtasan = true" @click.outside="openAtasan = false"
@@ -200,7 +200,7 @@
                             @endforeach
                         </div>
                     </div>
-                </div>
+                </div> -->
             </div>
 
             {{-- Submit --}}
