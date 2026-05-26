@@ -164,14 +164,14 @@
                 {{-- Status Kerja --}}
                 <div>
                     <label class="block text-xs font-medium text-gray-600 mb-1">Status Kerja <span class="text-red-500">*</span></label>
-                    <select name="status_kerja" required
-                        class="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white @error('status_kerja') border-red-400 @enderror">
+                    <select name="stts_kerja" required
+                        class="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white @error('stts_kerja') border-red-400 @enderror">
                         <option value="">-- Pilih --</option>
-                        @foreach(['Tetap', 'Kontrak', 'Magang', 'Honorer'] as $val)
-                        <option value="{{ $val }}" {{ old('status_kerja', $k?->status_kerja) === $val ? 'selected' : '' }}>{{ $val }}</option>
+                        @foreach(\DB::table('stts_kerja')->orderBy('indek')->get() as $sk)
+                        <option value="{{ $sk->stts }}" {{ old('stts_kerja', $k?->stts_kerja) === $sk->stts ? 'selected' : '' }}>{{ $sk->ktg }}</option>
                         @endforeach
                     </select>
-                    @error('status_kerja') <p class="text-xs text-red-500 mt-1">{{ $message }}</p> @enderror
+                    @error('stts_kerja') <p class="text-xs text-red-500 mt-1">{{ $message }}</p> @enderror
                 </div>
 
                 {{-- Status Aktif --}}

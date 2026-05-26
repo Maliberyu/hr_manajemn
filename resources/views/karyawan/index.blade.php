@@ -67,11 +67,11 @@
         </select>
 
         {{-- Status Kerja --}}
-        <select name="status_kerja"
+        <select name="stts_kerja"
             class="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white">
             <option value="">Semua Status Kerja</option>
             @foreach($statusKerjaList as $sk)
-            <option value="{{ $sk }}" {{ request('status_kerja') === $sk ? 'selected' : '' }}>{{ $sk }}</option>
+            <option value="{{ $sk->stts }}" {{ request('stts_kerja') === $sk->stts ? 'selected' : '' }}>{{ $sk->ktg }}</option>
             @endforeach
         </select>
 
@@ -98,7 +98,7 @@
     </div>
 
     {{-- Indikator filter aktif --}}
-    @php $activeFilters = array_filter(request()->only(['q','departemen','status','status_kerja','urut'])); @endphp
+    @php $activeFilters = array_filter(request()->only(['q','departemen','status','stts_kerja','urut'])); @endphp
     @if(count($activeFilters))
     <div class="mt-3 flex flex-wrap gap-2">
         @if(request('q'))
@@ -116,9 +116,9 @@
             Status: {{ request('status') }}
         </span>
         @endif
-        @if(request('status_kerja'))
+        @if(request('stts_kerja'))
         <span class="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-50 text-blue-700 text-xs rounded-full">
-            Kerja: {{ request('status_kerja') }}
+            Kerja: {{ $statusKerjaList->firstWhere('stts', request('stts_kerja'))?->ktg ?? request('stts_kerja') }}
         </span>
         @endif
         @if(request('urut'))

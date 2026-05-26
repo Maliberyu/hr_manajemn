@@ -44,8 +44,8 @@
                     @else
                     <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-600">Non Aktif</span>
                     @endif
-                    @if($karyawan->status_kerja)
-                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-600">{{ $karyawan->status_kerja }}</span>
+                    @if($karyawan->stts_kerja)
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-600">{{ $karyawan->stts_kerja }}</span>
                     @endif
                 </div>
                 <p class="text-gray-600 text-sm">{{ $karyawan->jbtn ?? '-' }}</p>
@@ -153,7 +153,7 @@
                 ['label' => 'Jabatan', 'value' => $karyawan->jbtn ?? '-'],
                 ['label' => 'Departemen', 'value' => $karyawan->departemenRef?->nama ?? '-'],
                 ['label' => 'Pendidikan', 'value' => $karyawan->pendidikan ?? '-'],
-                ['label' => 'Status Kerja', 'value' => $karyawan->status_kerja ?? $karyawan->stts_kerja ?? '-'],
+                ['label' => 'Status Kerja', 'value' => $karyawan->stts_kerja ?? '-'],
                 ['label' => 'Status Aktif', 'value' => $karyawan->stts_aktif],
                 ['label' => 'Mulai Kerja', 'value' => $karyawan->mulai_kerja?->translatedFormat('d F Y') ?? '-'],
                 ['label' => 'Masa Kerja', 'value' => $karyawan->mulai_kerja ? $karyawan->masa_kerja : '-'],

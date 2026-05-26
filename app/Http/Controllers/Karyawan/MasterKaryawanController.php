@@ -31,17 +31,13 @@ class MasterKaryawanController extends Controller
             ->when($request->q,            fn($q, $s) => $q->cari($s))
             ->when($request->departemen,   fn($q, $d) => $q->departemen($d))
             ->when($request->status,       fn($q, $s) => $q->where('stts_aktif', $s))
-            ->when($request->status_kerja, fn($q, $s) => $q->where('status_kerja', $s))
-            ->when($request->jk,           fn($q, $j) => $q->where('jk', $j))
+            ->when($request->stts_kerja, fn($q, $s) => $q->where('stts_kerja', $s))
+            ->when($request->jk,         fn($q, $j) => $q->where('jk', $j))
             ->orderBy($order[0], $order[1]);
 
         $pegawai         = $query->paginate(20)->withQueryString();
         $departemen      = Departemen::orderBy('nama')->pluck('nama', 'dep_id');
-        $statusKerjaList = Pegawai::whereNotNull('status_kerja')
-                               ->where('status_kerja', '!=', '')
-                               ->distinct()
-                               ->orderBy('status_kerja')
-                               ->pluck('status_kerja');
+        $statusKerjaList = \DB::table('stts_kerja')->orderBy('indek')->get(['stts', 'ktg']);
 
         return view('karyawan.index', compact('pegawai', 'departemen', 'statusKerjaList'));
     }
@@ -72,7 +68,7 @@ class MasterKaryawanController extends Controller
             'no_ktp'        => 'nullable|digits:16',
             'npwp'          => 'nullable|max:30',
             'gapok'         => 'required|numeric|min:0',
-            'status_kerja'  => 'required|max:50',
+            'stts_kerja'    => 'required|exists:stts_kerja,stts',
             'stts_aktif'    => 'required|in:AKTIF,CUTI,KELUAR,TENAGA LUAR',
             'wajibmasuk'    => 'required|integer|min:0|max:31',
             'photo'         => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
@@ -132,7 +128,7 @@ class MasterKaryawanController extends Controller
             'no_ktp'      => 'nullable|digits:16',
             'npwp'        => 'nullable|max:30',
             'gapok'       => 'required|numeric|min:0',
-            'status_kerja' => 'required|max:50',
+            'stts_kerja'  => 'required|exists:stts_kerja,stts',
             'stts_aktif'  => 'required|in:AKTIF,CUTI,KELUAR,TENAGA LUAR',
             'wajibmasuk'  => 'required|integer|min:0|max:31',
             'photo'       => 'nullable|image|mimes:jpg,jpeg,png|max:2048',

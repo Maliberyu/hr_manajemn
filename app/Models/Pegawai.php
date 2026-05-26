@@ -50,7 +50,6 @@ class Pegawai extends Model
         'dankes',
         'photo',
         'no_ktp',
-        'status_kerja',
     ];
 
     protected $casts = [
