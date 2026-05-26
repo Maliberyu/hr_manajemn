@@ -163,7 +163,7 @@
             </div>
 
             {{-- ── Atasan Langsung (muncul jika pegawai dipilih) ────── --}}
-            <div x-show="selectedPegawai" x-collapse class="border border-gray-200 rounded-xl overflow-hidden">
+            <!-- <div x-show="selectedPegawai" x-collapse class="border border-gray-200 rounded-xl overflow-hidden">
                 <div class="px-4 py-3 bg-gray-50 border-b border-gray-100">
                     <p class="text-sm font-medium text-gray-700 flex items-center gap-2">
                         <svg class="w-4 h-4 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -172,7 +172,7 @@
                         Atasan Langsung
                         <span class="text-xs text-gray-400 font-normal">(opsional)</span>
                     </p>
-                </div>
+                </div> -->
                 <!-- <div class="px-4 py-3" x-data="{ searchAtasan: '', openAtasan: false }">
                     <div class="relative">
                         <input type="text" x-model="searchAtasan"
