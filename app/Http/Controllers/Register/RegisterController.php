@@ -33,7 +33,7 @@ class RegisterController extends Controller
 
     public function showRegister()
     {
-        $calonAtasan = User::whereIn('role', ['atasan', 'hrd', 'admin'])
+        $calonAtasan = User::where('role', 'atasan')
             ->where('status', 'aktif')
             ->orderBy('nama')
             ->get(['id', 'nama', 'jabatan', 'role']);
