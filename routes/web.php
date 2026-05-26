@@ -119,12 +119,12 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/',                          [IjinKhususController::class, 'index'])->name('index');
         Route::get('/buat',                      [IjinKhususController::class, 'create'])->name('create');
         Route::post('/',                         [IjinKhususController::class, 'store'])->name('store');
-        Route::get('/{ijinKhusus}',              [IjinKhususController::class, 'show'])->name('show');
-        Route::post('/{ijinKhusus}/approve-atasan', [IjinKhususController::class, 'approveAtasan'])->name('approve.atasan');
-        Route::post('/{ijinKhusus}/tolak-atasan',   [IjinKhususController::class, 'tolakAtasan'])->name('tolak.atasan');
-        Route::post('/{ijinKhusus}/approve-hrd',    [IjinKhususController::class, 'approveHrd'])->name('approve.hrd');
-        Route::post('/{ijinKhusus}/tolak-hrd',      [IjinKhususController::class, 'tolakHrd'])->name('tolak.hrd');
-        Route::get('/{ijinKhusus}/download',        [IjinKhususController::class, 'downloadLampiran'])->name('download');
+        Route::get('/{ijinKhusus}',                 [IjinKhususController::class, 'show'])->name('show')->where('ijinKhusus', '[0-9]+');
+        Route::post('/{ijinKhusus}/approve-atasan', [IjinKhususController::class, 'approveAtasan'])->name('approve.atasan')->where('ijinKhusus', '[0-9]+');
+        Route::post('/{ijinKhusus}/tolak-atasan',   [IjinKhususController::class, 'tolakAtasan'])->name('tolak.atasan')->where('ijinKhusus', '[0-9]+');
+        Route::post('/{ijinKhusus}/approve-hrd',    [IjinKhususController::class, 'approveHrd'])->name('approve.hrd')->where('ijinKhusus', '[0-9]+');
+        Route::post('/{ijinKhusus}/tolak-hrd',      [IjinKhususController::class, 'tolakHrd'])->name('tolak.hrd')->where('ijinKhusus', '[0-9]+');
+        Route::get('/{ijinKhusus}/download',        [IjinKhususController::class, 'downloadLampiran'])->name('download')->where('ijinKhusus', '[0-9]+');
     });
 
     // ── Cuti — semua role (karyawan submit, atasan/hrd approve; controller filter) ─
