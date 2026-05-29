@@ -12,7 +12,9 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="HR Mgmt">
     <link rel="manifest" href="{{ route('pwa.manifest') }}">
-    <link rel="apple-touch-icon" href="{{ asset('images/iconhrm.png') }}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ asset('images/iconhrm.png') }}">
+    <link rel="apple-touch-icon" sizes="152x152" href="{{ asset('images/iconhrm.png') }}">
+    <link rel="apple-touch-icon" sizes="120x120" href="{{ asset('images/iconhrm.png') }}">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     @stack('styles')
 </head>
