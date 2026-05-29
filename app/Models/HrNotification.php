@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\PushNotificationService;
 use Illuminate\Database\Eloquent\Model;
 
 class HrNotification extends Model
@@ -37,6 +38,9 @@ class HrNotification extends Model
                 'message' => $message,
                 'link'    => $link,
             ]);
+
+            // Kirim push notification ke device user
+            app(PushNotificationService::class)->sendToUser($userId, $title, $message, $link);
         } catch (\Throwable) {
             // Tidak crash app jika tabel belum ada
         }

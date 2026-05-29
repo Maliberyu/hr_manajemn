@@ -40,6 +40,7 @@ use App\Http\Controllers\Shift\TukarShiftController;
 use App\Http\Controllers\Shift\DoubleShiftController;
 use App\Http\Controllers\Shift\JadwalRealisasiController;
 use App\Http\Controllers\Ess\EssBerkasController;
+use App\Http\Controllers\PushSubscriptionController;
 
 // ─── PWA Manifest (publik) ──────────────────────────────────────────────────────
 Route::get('/manifest.json', fn() =>
@@ -55,6 +56,9 @@ Route::post('/iht/{iht}/hadir/{jenis}', [IhtAbsensiController::class, 'simpan'])
 
 // ─── Verifikasi kehadiran peserta IHT (publik, tidak perlu login) ─────────────
 Route::get('/training/verify/{iht}/{peserta}', [\App\Http\Controllers\Training\TrainingController::class, 'verifyPeserta'])->name('training.iht.peserta.verify');
+
+// ─── Push Notification VAPID key (publik) ──────────────────────────────────────
+Route::get('/push/vapid-key', [PushSubscriptionController::class, 'vapidKey'])->name('push.vapid-key');
 
 // ─── Auth routes (publik) ───────────────────────────────────────────────────────
 Route::get('/login',    [LoginController::class, 'showLogin'])->name('login');
@@ -73,6 +77,10 @@ Route::middleware(['auth'])->group(function () {
     // ── Dashboard — controller yang handle redirect per role ───────────────────
     Route::get('/dashboard',           [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/dashboard/rekap-data',[DashboardController::class, 'rekapData'])->name('dashboard.rekap-data');
+
+    // ── Push Notification Subscription ────────────────────────────────────────
+    Route::post('/push/subscribe',   [PushSubscriptionController::class, 'subscribe'])->name('push.subscribe');
+    Route::post('/push/unsubscribe', [PushSubscriptionController::class, 'unsubscribe'])->name('push.unsubscribe');
 
     // ── Profil User ────────────────────────────────────────────────────────────
     Route::get('/profil',                  [ProfileController::class, 'show'])->name('profil.show');

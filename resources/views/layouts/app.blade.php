@@ -922,14 +922,53 @@
     </div>
     @endif
 
-    {{-- PWA Service Worker --}}
+    {{-- PWA Service Worker + Push Notification --}}
     <script>
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('{{ asset('sw.js') }}')
-                    .catch(err => console.warn('SW registration failed:', err));
+    (function() {
+        if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+
+        const VAPID_PUBLIC_KEY = '{{ config('app.vapid_public_key') }}';
+        const SUBSCRIBE_URL    = '{{ route('push.subscribe') }}';
+        const UNSUBSCRIBE_URL  = '{{ route('push.unsubscribe') }}';
+        const CSRF             = '{{ csrf_token() }}';
+
+        function urlBase64ToUint8Array(base64String) {
+            const padding = '='.repeat((4 - base64String.length % 4) % 4);
+            const base64  = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+            const rawData = window.atob(base64);
+            return Uint8Array.from([...rawData].map(c => c.charCodeAt(0)));
+        }
+
+        async function subscribePush(reg) {
+            const sub = await reg.pushManager.subscribe({
+                userVisibleOnly: true,
+                applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+            });
+            await fetch(SUBSCRIBE_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': CSRF },
+                body: JSON.stringify(sub.toJSON()),
             });
         }
+
+        async function initPush() {
+            const reg = await navigator.serviceWorker.register('{{ asset('sw.js') }}');
+            await navigator.serviceWorker.ready;
+
+            const existing = await reg.pushManager.getSubscription();
+            if (existing) return; // sudah subscribe
+
+            // Minta izin notifikasi
+            const permission = await Notification.requestPermission();
+            if (permission === 'granted') {
+                await subscribePush(reg);
+            }
+        }
+
+        window.addEventListener('load', () => {
+            initPush().catch(err => console.warn('Push init:', err));
+        });
+    })();
     </script>
 </body>
 </html>
