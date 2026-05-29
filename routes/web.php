@@ -41,6 +41,11 @@ use App\Http\Controllers\Shift\DoubleShiftController;
 use App\Http\Controllers\Shift\JadwalRealisasiController;
 use App\Http\Controllers\Ess\EssBerkasController;
 
+// ─── PWA Manifest (publik) ──────────────────────────────────────────────────────
+Route::get('/manifest.json', fn() =>
+    response()->view('pwa.manifest')->header('Content-Type', 'application/manifest+json')
+)->name('pwa.manifest');
+
 // ─── Redirect root ──────────────────────────────────────────────────────────────
 Route::get('/', fn() => redirect()->route('dashboard'));
 
