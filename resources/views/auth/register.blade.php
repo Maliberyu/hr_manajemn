@@ -4,6 +4,16 @@
     <meta charset="UTF-8">
     <title>Daftar Akun — HR Manajemen</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    {{-- PWA --}}
+    <meta name="theme-color" content="#1d4ed8">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="HR Mgmt">
+    <link rel="manifest" href="{{ route('pwa.manifest') }}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ asset('images/iconhrm.png') }}">
+    <link rel="apple-touch-icon" sizes="152x152" href="{{ asset('images/iconhrm.png') }}">
+    <link rel="apple-touch-icon" sizes="120x120" href="{{ asset('images/iconhrm.png') }}">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="min-h-screen bg-gradient-to-br from-blue-900 via-blue-800 to-indigo-900 flex items-center justify-center p-4">
@@ -252,5 +262,13 @@ function registerForm() {
     };
 }
 </script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('{{ asset('sw.js') }}')
+                    .catch(err => console.warn('SW registration failed:', err));
+            });
+        }
+    </script>
 </body>
 </html>
