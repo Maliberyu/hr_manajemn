@@ -25,5 +25,6 @@ return [
     'training'    => env('FEATURE_TRAINING', true),
     'absensi_gps'  => env('FEATURE_ABSENSI_GPS', true),
     'pendidikan'   => env('FEATURE_PENDIDIKAN', true),
+    'kredensial'   => env('FEATURE_KREDENSIAL', false),
 
 ];
