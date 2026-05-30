@@ -40,6 +40,8 @@ use App\Http\Controllers\Shift\TukarShiftController;
 use App\Http\Controllers\Shift\DoubleShiftController;
 use App\Http\Controllers\Shift\JadwalRealisasiController;
 use App\Http\Controllers\Ess\EssBerkasController;
+use App\Http\Controllers\Ess\EssKontrakController;
+use App\Http\Controllers\Kontrak\KontrakKerjaController;
 use App\Http\Controllers\PushSubscriptionController;
 
 // ─── PWA Manifest (publik) ──────────────────────────────────────────────────────
@@ -99,6 +101,11 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/ess/ijin/{jenis}', [DashboardController::class, 'essStoreIjin'])->name('ess.ijin.store');
     Route::get('/ess/payroll/{slip}/pdf', [DashboardController::class, 'essSlipPdf'])->name('ess.payroll.pdf');
 
+    // ── ESS Kontrak (lihat kontrak sendiri) ──────────────────────────────────
+    Route::get('/ess/kontrak', [EssKontrakController::class, 'index'])
+        ->name('ess.kontrak.index')
+        ->middleware('feature:kontrak');
+
     // ── ESS Berkas (self-service upload dokumen pribadi) ──────────────────────
     Route::prefix('ess/berkas')->name('ess.berkas.')->middleware('feature:ess_berkas')->group(function () {
         Route::get('/',                    [EssBerkasController::class, 'index'])->name('index');
@@ -148,6 +155,21 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/{ijinKhusus}/approve-hrd',    [IjinKhususController::class, 'approveHrd'])->name('approve.hrd')->where('ijinKhusus', '[0-9]+');
         Route::post('/{ijinKhusus}/tolak-hrd',      [IjinKhususController::class, 'tolakHrd'])->name('tolak.hrd')->where('ijinKhusus', '[0-9]+');
         Route::get('/{ijinKhusus}/download',        [IjinKhususController::class, 'downloadLampiran'])->name('download')->where('ijinKhusus', '[0-9]+');
+    });
+
+    // ── Kontrak Kerja ─────────────────────────────────────────────────────────
+    Route::prefix('kontrak')->name('kontrak.')->middleware('feature:kontrak')->group(function () {
+        Route::get('/',               [KontrakKerjaController::class, 'index'])->name('index');
+        Route::get('/create',         [KontrakKerjaController::class, 'create'])->name('create');
+        Route::post('/',              [KontrakKerjaController::class, 'store'])->name('store');
+        Route::get('/master-jenis',   [KontrakKerjaController::class, 'masterJenis'])->name('master-jenis');
+        Route::post('/master-jenis',  [KontrakKerjaController::class, 'storeJenis'])->name('master-jenis.store');
+        Route::put('/master-jenis/{jenis}',    [KontrakKerjaController::class, 'updateJenis'])->name('master-jenis.update')->where('jenis', '[0-9]+');
+        Route::delete('/master-jenis/{jenis}', [KontrakKerjaController::class, 'destroyJenis'])->name('master-jenis.destroy')->where('jenis', '[0-9]+');
+        Route::get('/{kontrak}',      [KontrakKerjaController::class, 'show'])->name('show')->where('kontrak', '[0-9]+');
+        Route::get('/{kontrak}/edit', [KontrakKerjaController::class, 'edit'])->name('edit')->where('kontrak', '[0-9]+');
+        Route::put('/{kontrak}',      [KontrakKerjaController::class, 'update'])->name('update')->where('kontrak', '[0-9]+');
+        Route::delete('/{kontrak}',   [KontrakKerjaController::class, 'destroy'])->name('destroy')->where('kontrak', '[0-9]+');
     });
 
     // ── Cuti — semua role (karyawan submit, atasan/hrd approve; controller filter) ─

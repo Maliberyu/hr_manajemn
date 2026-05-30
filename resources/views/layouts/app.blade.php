@@ -279,6 +279,7 @@
     {!! navLink('Jadwal Saya', 'shift.realisasi.index', 'M4 6h16M4 10h16M4 14h16M4 18h16', 0, 'shift.realisasi') !!}
     {!! navLink('Training Eksternal', 'training.eksternal.index', $trainingIcon, 0, 'training') !!}
     {!! navLink('Dokumen Saya', 'ess.berkas.index', 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z', 0, 'ess_berkas') !!}
+    {!! navLink('Kontrak Saya', 'ess.kontrak.index', 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2', 0, 'kontrak') !!}
     @php
         $slipKaryawan = 0;
         try { $slipKaryawan = \App\Models\SlipGaji::where('pegawai_id', auth()->user()->pegawai?->id)->final()->count(); } catch(\Throwable $e) {}
@@ -337,6 +338,7 @@
     {!! navLink('Lembur', 'lembur.index', 'M13 10V3L4 14h7v7l9-11h-7z', $badgeLembur, 'lembur') !!}
     {!! navLink('Training Eksternal', 'training.eksternal.index', $trainingIcon, $badgeEksternal, 'training') !!}
     {!! navLink('Dokumen Saya', 'ess.berkas.index', 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z', 0, 'ess_berkas') !!}
+    {!! navLink('Kontrak Saya', 'ess.kontrak.index', 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2', 0, 'kontrak') !!}
 
     {{-- Permintaan SDM (atasan bisa ajukan & lihat status) --}}
     @if(config('features.rekrutmen', true))
@@ -408,6 +410,7 @@
 @if($isHrdAdmin)
     {!! navLink('Dashboard', 'dashboard', 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6') !!}
     {!! navLink('Master Karyawan', 'karyawan.index', 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z') !!}
+    {!! navLink('Kontrak Kerja', 'kontrak.index', 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2', 0, 'kontrak') !!}
     {!! navLink('Absensi', 'absensi.index', 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z') !!}
     @php $cutiIjinActiveH = request()->routeIs('cuti.*') || request()->routeIs('ijin.*') || request()->routeIs('cuti.tahunan.*') || request()->routeIs('ijin-khusus.*'); @endphp
     <div x-data="{ open: {{ $cutiIjinActiveH ? 'true' : 'false' }} }">
@@ -956,7 +959,15 @@
             await navigator.serviceWorker.ready;
 
             const existing = await reg.pushManager.getSubscription();
-            if (existing) return; // sudah subscribe
+            if (existing) {
+                // Browser sudah subscribe tapi server mungkin belum punya — kirim ulang
+                await fetch(SUBSCRIBE_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': CSRF },
+                    body: JSON.stringify(existing.toJSON()),
+                });
+                return;
+            }
 
             // Minta izin notifikasi
             const permission = await Notification.requestPermission();
