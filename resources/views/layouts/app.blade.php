@@ -280,6 +280,7 @@
     {!! navLink('Training Eksternal', 'training.eksternal.index', $trainingIcon, 0, 'training') !!}
     {!! navLink('Dokumen Saya', 'ess.berkas.index', 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z', 0, 'ess_berkas') !!}
     {!! navLink('Kontrak Saya', 'ess.kontrak.index', 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2', 0, 'kontrak') !!}
+    {!! navLink('Pendidikan & Beasiswa', 'ess.pendidikan.index', 'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253', 0, 'pendidikan') !!}
     @php
         $slipKaryawan = 0;
         try { $slipKaryawan = \App\Models\SlipGaji::where('pegawai_id', auth()->user()->pegawai?->id)->final()->count(); } catch(\Throwable $e) {}
@@ -339,6 +340,7 @@
     {!! navLink('Training Eksternal', 'training.eksternal.index', $trainingIcon, $badgeEksternal, 'training') !!}
     {!! navLink('Dokumen Saya', 'ess.berkas.index', 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z', 0, 'ess_berkas') !!}
     {!! navLink('Kontrak Saya', 'ess.kontrak.index', 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2', 0, 'kontrak') !!}
+    {!! navLink('Pendidikan & Beasiswa', 'ess.pendidikan.index', 'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253', 0, 'pendidikan') !!}
 
     {{-- Permintaan SDM (atasan bisa ajukan & lihat status) --}}
     @if(config('features.rekrutmen', true))
@@ -411,6 +413,46 @@
     {!! navLink('Dashboard', 'dashboard', 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6') !!}
     {!! navLink('Master Karyawan', 'karyawan.index', 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z') !!}
     {!! navLink('Kontrak Kerja', 'kontrak.index', 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2', 0, 'kontrak') !!}
+    {{-- Pendidikan & Beasiswa: dropdown Riwayat + Beasiswa --}}
+    @php
+        $pendidikanActive = request()->routeIs('pendidikan.*');
+        $badgeBeasiswa = 0;
+        try { $badgeBeasiswa = \App\Models\Beasiswa::where('status','menunggu_hrd')->count(); } catch(\Throwable $e) {}
+    @endphp
+    @if(config('features.pendidikan', true))
+    <div x-data="{ open: {{ $pendidikanActive ? 'true' : 'false' }} }">
+        <button @click="open = !open"
+                class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition
+                       {{ $pendidikanActive ? 'bg-blue-500/30 text-white' : 'text-blue-200 hover:bg-blue-800/50 hover:text-white' }}">
+            <svg class="w-5 h-5 flex-shrink-0 {{ $pendidikanActive ? 'text-blue-300' : 'text-blue-400' }}"
+                 fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
+                      d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+            </svg>
+            <span x-show="sidebarOpen" class="flex-1 text-left whitespace-nowrap">Pendidikan</span>
+            @if($badgeBeasiswa > 0)
+            <span x-show="sidebarOpen" class="px-1.5 py-0.5 text-xs bg-amber-400 text-amber-900 rounded-full font-bold leading-none">{{ $badgeBeasiswa }}</span>
+            @else
+            <svg x-show="sidebarOpen" class="w-3.5 h-3.5 transition-transform" :class="open ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-width="2" d="M19 9l-7 7-7-7"/>
+            </svg>
+            @endif
+        </button>
+        <div x-show="open && sidebarOpen" x-cloak class="ml-4 mt-0.5 space-y-0.5">
+            @foreach([
+                ['Riwayat Pendidikan', 'pendidikan.riwayat.index', 'pendidikan.riwayat.*'],
+                ['Pengajuan Beasiswa',  'pendidikan.beasiswa.index', 'pendidikan.beasiswa.*'],
+            ] as [$lbl,$rt,$match])
+            @php $sa = request()->routeIs($match); @endphp
+            <a href="{{ route($rt) }}"
+               class="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium transition
+                      {{ $sa ? 'bg-blue-500/20 text-white' : 'text-blue-300 hover:bg-blue-800/40 hover:text-white' }}">
+                <span class="w-1 h-1 rounded-full bg-current opacity-60 flex-shrink-0"></span>{{ $lbl }}
+            </a>
+            @endforeach
+        </div>
+    </div>
+    @endif
     {!! navLink('Absensi', 'absensi.index', 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z') !!}
     @php $cutiIjinActiveH = request()->routeIs('cuti.*') || request()->routeIs('ijin.*') || request()->routeIs('cuti.tahunan.*') || request()->routeIs('ijin-khusus.*'); @endphp
     <div x-data="{ open: {{ $cutiIjinActiveH ? 'true' : 'false' }} }">

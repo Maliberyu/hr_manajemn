@@ -23,6 +23,7 @@ return [
     'kpi'         => env('FEATURE_KPI', true),
     'rekrutmen'   => env('FEATURE_REKRUTMEN', true),
     'training'    => env('FEATURE_TRAINING', true),
-    'absensi_gps' => env('FEATURE_ABSENSI_GPS', true),
+    'absensi_gps'  => env('FEATURE_ABSENSI_GPS', true),
+    'pendidikan'   => env('FEATURE_PENDIDIKAN', true),
 
 ];

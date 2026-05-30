@@ -41,7 +41,9 @@ use App\Http\Controllers\Shift\DoubleShiftController;
 use App\Http\Controllers\Shift\JadwalRealisasiController;
 use App\Http\Controllers\Ess\EssBerkasController;
 use App\Http\Controllers\Ess\EssKontrakController;
+use App\Http\Controllers\Ess\EssPendidikanController;
 use App\Http\Controllers\Kontrak\KontrakKerjaController;
+use App\Http\Controllers\Pendidikan\PendidikanController;
 use App\Http\Controllers\PushSubscriptionController;
 
 // ─── PWA Manifest (publik) ──────────────────────────────────────────────────────
@@ -105,6 +107,15 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/ess/kontrak', [EssKontrakController::class, 'index'])
         ->name('ess.kontrak.index')
         ->middleware('feature:kontrak');
+
+    // ── ESS Pendidikan & Beasiswa ─────────────────────────────────────────────
+    Route::prefix('ess/pendidikan')->name('ess.pendidikan.')->middleware('feature:pendidikan')->group(function () {
+        Route::get('/',                                        [EssPendidikanController::class, 'index'])->name('index');
+        Route::post('/riwayat',                                [EssPendidikanController::class, 'riwayatStore'])->name('riwayat.store');
+        Route::delete('/riwayat/{riwayat}',                    [EssPendidikanController::class, 'riwayatDestroy'])->name('riwayat.destroy')->where('riwayat', '[0-9]+');
+        Route::post('/beasiswa',                               [EssPendidikanController::class, 'beasiswaStore'])->name('beasiswa.store');
+        Route::post('/beasiswa/{beasiswa}/approve-atasan',     [EssPendidikanController::class, 'beasiswaApproveAtasan'])->name('beasiswa.approve-atasan')->where('beasiswa', '[0-9]+');
+    });
 
     // ── ESS Berkas (self-service upload dokumen pribadi) ──────────────────────
     Route::prefix('ess/berkas')->name('ess.berkas.')->middleware('feature:ess_berkas')->group(function () {
@@ -271,6 +282,19 @@ Route::middleware(['auth'])->group(function () {
 // Master Karyawan, Absensi, Shift, Payroll, Kinerja, Rekrutmen, Training IHT
 // ═══════════════════════════════════════════════════════════════════════════════
 Route::middleware(['auth', 'role:hrd,admin'])->group(function () {
+
+    // ── Pendidikan & Beasiswa (HRD/Admin) ────────────────────────────────────
+    Route::prefix('pendidikan')->name('pendidikan.')->middleware('feature:pendidikan')->group(function () {
+        Route::get('/riwayat',                          [PendidikanController::class, 'riwayatIndex'])->name('riwayat.index');
+        Route::post('/riwayat',                         [PendidikanController::class, 'riwayatStore'])->name('riwayat.store');
+        Route::put('/riwayat/{riwayat}',                [PendidikanController::class, 'riwayatUpdate'])->name('riwayat.update')->where('riwayat', '[0-9]+');
+        Route::delete('/riwayat/{riwayat}',             [PendidikanController::class, 'riwayatDestroy'])->name('riwayat.destroy')->where('riwayat', '[0-9]+');
+        Route::get('/beasiswa',                         [PendidikanController::class, 'beasiswaIndex'])->name('beasiswa.index');
+        Route::get('/beasiswa/{beasiswa}',              [PendidikanController::class, 'beasiswaShow'])->name('beasiswa.show')->where('beasiswa', '[0-9]+');
+        Route::post('/beasiswa/{beasiswa}/approve-hrd', [PendidikanController::class, 'beasiswaApproveHrd'])->name('beasiswa.approve-hrd')->where('beasiswa', '[0-9]+');
+        Route::post('/beasiswa/{beasiswa}/selesai',     [PendidikanController::class, 'beasiswaSelesai'])->name('beasiswa.selesai')->where('beasiswa', '[0-9]+');
+        Route::post('/beasiswa/{beasiswa}/upload-hasil',[PendidikanController::class, 'beasiswaUploadHasil'])->name('beasiswa.upload-hasil')->where('beasiswa', '[0-9]+');
+    });
 
     // ── Cuti Lock & Setting (HRD/Admin) ──────────────────────────────────────
     Route::prefix('cuti-lock')->name('cuti.lock.')->middleware('feature:cuti')->group(function () {
