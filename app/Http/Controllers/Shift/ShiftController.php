@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Shift;
 
 use App\Http\Controllers\Controller;
+use App\Models\AtasanPegawai;
 use App\Models\JadwalPegawai;
 use App\Models\Pegawai;
 use App\Models\Departemen;
@@ -15,25 +16,40 @@ class ShiftController extends Controller
     {
     }
 
+    // NIK yang boleh dikelola: null = semua (HRD/admin), array = bawahan+self (atasan)
+    private function allowedNik(): ?array
+    {
+        $user = auth()->user();
+        if (in_array($user->role, ['hrd', 'admin'])) return null;
+
+        $nik = AtasanPegawai::nikBawahan($user->id);
+        if ($user->pegawai) $nik[] = $user->pegawai->nik;
+        return array_unique($nik);
+    }
+
     // ─── Index: jadwal bulan ini per departemen ───────────────────────────────
 
     public function index(Request $request)
     {
-        $bulan = (int) ($request->bulan ?? now()->month);
-        $tahun = (int) ($request->tahun ?? now()->year);
-        $depId = $request->departemen;
+        $bulan      = (int) ($request->bulan ?? now()->month);
+        $tahun      = (int) ($request->tahun ?? now()->year);
+        $depId      = $request->departemen;
+        $allowedNik = $this->allowedNik();
 
         $pegawai = Pegawai::aktif()
-            ->when($depId, fn($q, $d) => $q->departemen($d))
+            ->when($allowedNik !== null, fn($q) => $q->whereIn('nik', $allowedNik))
+            ->when($allowedNik === null && $depId, fn($q) => $q->departemen($depId))
             ->with(['jadwalBulanan' => fn($q) => $q->where('tahun', $tahun)->where('bulan', $bulan)])
             ->orderBy('nama')
             ->get();
 
-        $departemen = Departemen::orderBy('nama')->pluck('nama', 'dep_id');
+        // Atasan tidak perlu filter departemen (sudah dibatasi by bawahan)
+        $departemen = $allowedNik === null
+            ? Departemen::orderBy('nama')->pluck('nama', 'dep_id')
+            : collect();
 
-        // Jumlah hari dalam bulan
-        $jumlahHari = Carbon::create($tahun, $bulan, 1)->daysInMonth;
-        $hariPertama= Carbon::create($tahun, $bulan, 1)->dayOfWeek; // 0=Minggu
+        $jumlahHari  = Carbon::create($tahun, $bulan, 1)->daysInMonth;
+        $hariPertama = Carbon::create($tahun, $bulan, 1)->dayOfWeek;
 
         return view('shift.index', compact(
             'pegawai', 'departemen', 'bulan', 'tahun', 'jumlahHari', 'hariPertama', 'depId'
@@ -44,6 +60,9 @@ class ShiftController extends Controller
 
     public function edit(Request $request, Pegawai $karyawan)
     {
+        $allowedNik = $this->allowedNik();
+        abort_if($allowedNik !== null && !in_array($karyawan->nik, $allowedNik), 403, 'Akses ditolak.');
+
         $bulan = (int) ($request->bulan ?? now()->month);
         $tahun = (int) ($request->tahun ?? now()->year);
 
@@ -61,6 +80,9 @@ class ShiftController extends Controller
 
     public function update(Request $request, Pegawai $karyawan)
     {
+        $allowedNik = $this->allowedNik();
+        abort_if($allowedNik !== null && !in_array($karyawan->nik, $allowedNik), 403, 'Akses ditolak.');
+
         $bulan = (int) $request->bulan;
         $tahun = (int) $request->tahun;
 
@@ -87,10 +109,16 @@ class ShiftController extends Controller
 
     public function inputMassal(Request $request)
     {
-
         $bulan  = (int) $request->bulan;
         $tahun  = (int) $request->tahun;
-        $shifts = $request->input('shifts', []); // ['pegawai_id' => ['h1'=>'Pagi', ...]]
+        $shifts = $request->input('shifts', []);
+
+        // Atasan: hanya proses pegawai dalam daftar bawahan
+        $allowedNik = $this->allowedNik();
+        if ($allowedNik !== null) {
+            $allowedIds = Pegawai::whereIn('nik', $allowedNik)->pluck('id')->map(fn($id) => (string)$id)->toArray();
+            $shifts = array_filter($shifts, fn($id) => in_array((string)$id, $allowedIds), ARRAY_FILTER_USE_KEY);
+        }
 
         foreach ($shifts as $pegawaiId => $hariShift) {
             $data = ['id' => $pegawaiId, 'tahun' => $tahun, 'bulan' => $bulan];
@@ -122,7 +150,11 @@ class ShiftController extends Controller
 
         $query = JadwalPegawai::where('tahun', $tahunAsal)->where('bulan', $bulanAsal);
 
-        if ($request->departemen) {
+        $allowedNik = $this->allowedNik();
+        if ($allowedNik !== null) {
+            $allowedIds = Pegawai::whereIn('nik', $allowedNik)->pluck('id');
+            $query->whereIn('id', $allowedIds);
+        } elseif ($request->departemen) {
             $pegawaiIds = Pegawai::departemen($request->departemen)->pluck('id');
             $query->whereIn('id', $pegawaiIds);
         }
@@ -146,6 +178,9 @@ class ShiftController extends Controller
 
     public function show(Request $request, Pegawai $karyawan)
     {
+        $allowedNik = $this->allowedNik();
+        abort_if($allowedNik !== null && !in_array($karyawan->nik, $allowedNik), 403, 'Akses ditolak.');
+
         $bulan = (int) ($request->bulan ?? now()->month);
         $tahun = (int) ($request->tahun ?? now()->year);
 

@@ -319,4 +319,46 @@
     </div>
 
 </div>
+
+{{-- ── Ijazah dari Modul Pendidikan ──────────────────────────────────────────── --}}
+@if($ijazahList->isNotEmpty())
+<div class="mt-5 bg-white rounded-2xl border border-blue-100 shadow-sm overflow-hidden">
+    <div class="px-5 py-4 border-b border-blue-50 bg-blue-50/50 flex items-center gap-2">
+        <svg class="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+        </svg>
+        <h3 class="text-sm font-semibold text-blue-700">Ijazah (dari Modul Pendidikan)</h3>
+        <span class="ml-auto text-xs text-blue-400">{{ $ijazahList->count() }} file</span>
+    </div>
+    <ul class="divide-y divide-gray-50">
+        @foreach($ijazahList as $ij)
+        <li class="px-5 py-3 flex items-center gap-3 hover:bg-gray-50/60 transition">
+            <div class="w-9 h-9 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0">
+                <svg class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                </svg>
+            </div>
+            <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2 flex-wrap">
+                    <p class="text-sm font-semibold text-gray-800">Ijazah {{ $ij->jenjang }}</p>
+                    @if($ij->is_terakhir)
+                    <span class="px-2 py-0.5 text-xs font-medium bg-green-100 text-green-700 rounded-full">Terakhir</span>
+                    @endif
+                </div>
+                <p class="text-xs text-gray-400 mt-0.5">
+                    {{ $ij->nama_institusi }}{{ $ij->jurusan ? ' · '.$ij->jurusan : '' }}
+                    @if($ij->tahun_lulus) · Lulus {{ $ij->tahun_lulus }} @endif
+                </p>
+            </div>
+            <a href="{{ $ij->file_url }}" target="_blank"
+               class="flex-shrink-0 p-1.5 text-blue-500 hover:bg-blue-50 rounded-lg transition" title="Lihat / Unduh">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                </svg>
+            </a>
+        </li>
+        @endforeach
+    </ul>
+</div>
+@endif
 @endsection

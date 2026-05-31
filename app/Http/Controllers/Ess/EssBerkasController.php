@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Ess;
 use App\Http\Controllers\Controller;
 use App\Models\BerkasPegawai;
 use App\Models\MasterBerkasPegawai;
+use App\Models\RiwayatPendidikan;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
@@ -28,7 +29,14 @@ class EssBerkasController extends Controller
                         ->get();
         $jenisList = MasterBerkasPegawai::orderBy('nama')->pluck('nama');
 
-        return view('ess.berkas', compact('pegawai', 'berkas', 'jenisList'));
+        $ijazahList = config('features.pendidikan', true)
+            ? RiwayatPendidikan::where('nik', $pegawai->nik)
+                ->whereNotNull('file_ijazah')
+                ->orderByRaw("FIELD(jenjang,'S3','S2','S1','D3','D2','D1','SMA/SMK','SMP','SD','Non-Formal')")
+                ->get()
+            : collect();
+
+        return view('ess.berkas', compact('pegawai', 'berkas', 'jenisList', 'ijazahList'));
     }
 
     // ─── Upload berkas ────────────────────────────────────────────────────────

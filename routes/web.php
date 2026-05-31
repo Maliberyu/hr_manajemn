@@ -306,19 +306,7 @@ Route::middleware(['auth', 'role:hrd,admin'])->group(function () {
         Route::post('/unlock/{cutiUnlockRequest}/tolak',      [CutiLockController::class, 'tolakRequest'])->name('tolak');
     });
 
-    // ── Print Jadwal Rencana ──────────────────────────────────────────────────
-    Route::get('shift/rencana/print', function (\Illuminate\Http\Request $request) {
-        $bulan  = (int) ($request->bulan ?? now()->month);
-        $tahun  = (int) ($request->tahun ?? now()->year);
-        $depId  = $request->departemen;
-        $pegawai = \App\Models\Pegawai::aktif()
-            ->when($depId, fn($q) => $q->departemen($depId))
-            ->with(['jadwalBulanan' => fn($q) => $q->where('tahun', $tahun)->where('bulan', $bulan)])
-            ->orderBy('nama')->get();
-        $departemen = \App\Models\Departemen::orderBy('nama')->pluck('nama', 'dep_id');
-        $jumlahHari = \Carbon\Carbon::create($tahun, $bulan)->daysInMonth;
-        return view('shift.rencana.print', compact('pegawai','departemen','bulan','tahun','jumlahHari','depId'));
-    })->name('shift.rencana.print')->middleware('feature:shift');
+    // shift.rencana.print & shift.* dipindah ke group hrd,admin,atasan di bawah
 
     // ── Master Shift (HRD/Admin) ──────────────────────────────────────────────
     Route::prefix('shift/master')->name('shift.master.')->middleware('feature:shift')->group(function () {
@@ -375,15 +363,7 @@ Route::middleware(['auth', 'role:hrd,admin'])->group(function () {
         });
     });
 
-    // ── Shift Kerja (Jadwal Rencana) ──────────────────────────────────────────
-    Route::prefix('shift')->name('shift.')->middleware('feature:shift')->group(function () {
-        Route::get('/',                           [ShiftController::class, 'index'])->name('index');
-        Route::get('/karyawan/{karyawan}/edit',   [ShiftController::class, 'edit'])->name('edit');
-        Route::put('/karyawan/{karyawan}',        [ShiftController::class, 'update'])->name('update');
-        Route::get('/karyawan/{karyawan}',        [ShiftController::class, 'show'])->name('show');
-        Route::post('/massal',                    [ShiftController::class, 'inputMassal'])->name('massal');
-        Route::post('/copy-bulan-lalu',           [ShiftController::class, 'copyBulanLalu'])->name('copy');
-    });
+    // (shift.* dipindah ke group hrd,admin,atasan)
 
     // ── Payroll ────────────────────────────────────────────────────────────────
     Route::prefix('payroll')->name('payroll.')->middleware('feature:payroll')->group(function () {
@@ -525,6 +505,41 @@ Route::middleware(['auth', 'role:hrd,admin'])->group(function () {
             Route::get('/{iht}/cetak-peserta', [TrainingController::class, 'cetakPeserta'])->name('cetak-peserta');
         });
     });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Shift Jadwal Rencana — HRD, Admin, dan Atasan
+// Atasan hanya bisa kelola jadwal diri sendiri + bawahan langsung
+// ═══════════════════════════════════════════════════════════════════════════════
+Route::middleware(['auth', 'role:hrd,admin,atasan'])->middleware('feature:shift')->group(function () {
+    Route::prefix('shift')->name('shift.')->group(function () {
+        Route::get('/',                           [ShiftController::class, 'index'])->name('index');
+        Route::get('/karyawan/{karyawan}/edit',   [ShiftController::class, 'edit'])->name('edit');
+        Route::put('/karyawan/{karyawan}',        [ShiftController::class, 'update'])->name('update');
+        Route::get('/karyawan/{karyawan}',        [ShiftController::class, 'show'])->name('show');
+        Route::post('/massal',                    [ShiftController::class, 'inputMassal'])->name('massal');
+        Route::post('/copy-bulan-lalu',           [ShiftController::class, 'copyBulanLalu'])->name('copy');
+    });
+    Route::get('shift/rencana/print', function (\Illuminate\Http\Request $request) {
+        $bulan  = (int) ($request->bulan ?? now()->month);
+        $tahun  = (int) ($request->tahun ?? now()->year);
+        $depId  = $request->departemen;
+        $user   = auth()->user();
+        $allowedNik = in_array($user->role, ['hrd','admin'])
+            ? null
+            : array_unique(array_merge(
+                \App\Models\AtasanPegawai::nikBawahan($user->id),
+                $user->pegawai ? [$user->pegawai->nik] : []
+            ));
+        $pegawai = \App\Models\Pegawai::aktif()
+            ->when($allowedNik !== null, fn($q) => $q->whereIn('nik', $allowedNik))
+            ->when($allowedNik === null && $depId, fn($q) => $q->departemen($depId))
+            ->with(['jadwalBulanan' => fn($q) => $q->where('tahun', $tahun)->where('bulan', $bulan)])
+            ->orderBy('nama')->get();
+        $departemen = \App\Models\Departemen::orderBy('nama')->pluck('nama', 'dep_id');
+        $jumlahHari = \Carbon\Carbon::create($tahun, $bulan)->daysInMonth;
+        return view('shift.rencana.print', compact('pegawai','departemen','bulan','tahun','jumlahHari','depId'));
+    })->name('shift.rencana.print');
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════

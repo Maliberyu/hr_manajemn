@@ -17,7 +17,10 @@ class EssPendidikanController extends Controller
     public function index()
     {
         $pegawai = auth()->user()->pegawai;
-        abort_if(!$pegawai, 403, 'Akun belum terhubung ke data pegawai.');
+        if (!$pegawai) {
+            return redirect()->route('ess.dashboard')
+                ->with('error', 'Akun Anda belum terhubung ke data pegawai. Hubungi admin untuk mengatur.');
+        }
 
         $riwayats  = RiwayatPendidikan::where('nik', $pegawai->nik)
             ->orderByRaw("FIELD(jenjang, 'S3','S2','S1','D3','D2','D1','SMA/SMK','SMP','SD','Non-Formal')")

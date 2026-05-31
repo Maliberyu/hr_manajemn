@@ -83,6 +83,6 @@ class KontrakKerja extends Model
             'diperbarui' => 'Diperbarui',
             'dibatalkan' => 'Dibatalkan',
             default      => $this->status,
-        ];
+        };
     }
 }

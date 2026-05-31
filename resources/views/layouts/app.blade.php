@@ -17,6 +17,14 @@
     <link rel="apple-touch-icon" sizes="120x120" href="{{ asset('images/iconhrm.png') }}">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     @stack('styles')
+    <style>
+        #hr-loading-overlay{opacity:0;pointer-events:none;transition:opacity .22s ease}
+        #hr-loading-overlay.hr-show{opacity:1;pointer-events:all}
+        #hr-loading-card{transform:scale(.9) translateY(8px);transition:transform .28s cubic-bezier(.34,1.56,.64,1)}
+        #hr-loading-overlay.hr-show #hr-loading-card{transform:scale(1) translateY(0)}
+        #hr-spinner-ring{width:46px;height:46px;border-radius:50%;border:3.5px solid #e5e7eb;border-top-color:#2563eb;animation:hr-spin .7s linear infinite}
+        @keyframes hr-spin{to{transform:rotate(360deg)}}
+    </style>
 </head>
 <body class="h-full bg-gray-50" x-data="{ sidebarOpen: true, mobileOpen: false, featureModal: false }">
 
@@ -408,6 +416,7 @@
     {!! navLink('Tukar Shift', 'tukar-shift.index', 'M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4', 0, 'tukar-shift') !!}
     {!! navLink('Double Shift', 'double-shift.index', 'M13 10V3L4 14h7v7l9-11h-7z', 0, 'double-shift') !!}
     {!! navLink('Jadwal Saya', 'shift.realisasi.index', 'M4 6h16M4 10h16M4 14h16M4 18h16', 0, 'shift.realisasi') !!}
+    {!! navLink('Jadwal Rencana', 'shift.index', 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2', 0, 'shift') !!}
 @endif
 
 {{-- ═══════════════════════════════ HRD & ADMIN ════════════════════════════ --}}
@@ -444,6 +453,7 @@
             @foreach([
                 ['Riwayat Pendidikan', 'pendidikan.riwayat.index', 'pendidikan.riwayat.*'],
                 ['Pengajuan Beasiswa',  'pendidikan.beasiswa.index', 'pendidikan.beasiswa.*'],
+                ['Pendidikan Saya',     'ess.pendidikan.index',      'ess.pendidikan.*'],
             ] as [$lbl,$rt,$match])
             @php $sa = request()->routeIs($match); @endphp
             <a href="{{ route($rt) }}"
@@ -969,6 +979,83 @@
         </div>
     </div>
     @endif
+
+    {{-- ── Loading Overlay (tengah layar) ────────────────────────────────────── --}}
+    <div id="hr-loading-overlay"
+         class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur-[2px]">
+        <div id="hr-loading-card" class="bg-white rounded-2xl shadow-2xl px-12 py-8 flex flex-col items-center gap-5">
+            <div id="hr-spinner-ring"></div>
+            <p id="hr-loading-text" class="text-sm font-semibold text-gray-500 tracking-wide">Memuat…</p>
+        </div>
+    </div>
+
+    {{-- ── Global Loading State (form submit + navigasi link) ──────────────── --}}
+    <script>
+    (function () {
+        var overlay     = document.getElementById('hr-loading-overlay');
+        var loadingText = document.getElementById('hr-loading-text');
+        var hideTimer   = null;
+
+        function showLoading(label) {
+            if (hideTimer) { clearTimeout(hideTimer); hideTimer = null; }
+            if (loadingText) loadingText.textContent = (label || 'Memuat') + '…';
+            if (overlay) overlay.classList.add('hr-show');
+            // Auto-hide setelah 6 detik (untuk kasus download, halaman tidak navigate)
+            hideTimer = setTimeout(hideLoading, 6000);
+        }
+
+        function hideLoading() {
+            if (hideTimer) { clearTimeout(hideTimer); hideTimer = null; }
+            if (overlay) overlay.classList.remove('hr-show');
+        }
+
+        // ── Form submit ─────────────────────────────────────────────────────────
+        document.addEventListener('submit', function (e) {
+            if (e.defaultPrevented) return;
+            var btn = e.target.querySelector('[type="submit"]:not([data-no-loading])');
+            if (btn && !btn.disabled && !btn.dataset.loading) {
+                btn.dataset.loading = '1';
+                btn.disabled = true;
+            }
+            var label = btn ? (btn.textContent || '').trim().replace(/\s+/g, ' ').slice(0, 28) : '';
+            showLoading(label || 'Memproses');
+        });
+
+        // ── Klik link navigasi ──────────────────────────────────────────────────
+        document.addEventListener('click', function (e) {
+            // Abaikan klik dengan modifier key (Ctrl/Cmd/Shift = buka tab baru)
+            if (e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
+            if (e.defaultPrevented) return;
+
+            var link = e.target.closest('a[href]');
+            if (!link) return;
+            if (link.hasAttribute('data-no-loading')) return;
+
+            var href = link.getAttribute('href') || '';
+            // Abaikan anchor sama halaman, javascript:, dan _blank
+            if (!href || href === '#' || href.charAt(0) === '#' || href.indexOf('javascript:') === 0) return;
+            if (link.target === '_blank') return;
+            if (link.hasAttribute('download')) return;
+
+            showLoading('Memuat');
+        });
+
+        // Saat halaman benar-benar navigate, batalkan auto-hide timer
+        window.addEventListener('beforeunload', function () {
+            if (hideTimer) { clearTimeout(hideTimer); hideTimer = null; }
+        });
+
+        // Restore saat browser back (bfcache)
+        window.addEventListener('pageshow', function (e) {
+            if (!e.persisted) return;
+            hideLoading();
+            document.querySelectorAll('[data-loading]').forEach(function (btn) {
+                btn.disabled = false;
+                delete btn.dataset.loading;
+            });
+        });
+    }());
+    </script>
 
     {{-- PWA Service Worker + Push Notification --}}
     <script>
