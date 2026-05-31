@@ -1060,8 +1060,9 @@
 
         const VAPID_PUBLIC_KEY = '{{ config('app.vapid_public_key') }}';
         const SUBSCRIBE_URL    = '{{ route('push.subscribe') }}';
-        const UNSUBSCRIBE_URL  = '{{ route('push.unsubscribe') }}';
         const CSRF             = '{{ csrf_token() }}';
+
+        if (!VAPID_PUBLIC_KEY) { console.warn('[Push] VAPID_PUBLIC_KEY kosong, push dinonaktifkan.'); return; }
 
         function urlBase64ToUint8Array(base64String) {
             const padding = '='.repeat((4 - base64String.length % 4) % 4);
@@ -1070,42 +1071,49 @@
             return Uint8Array.from([...rawData].map(c => c.charCodeAt(0)));
         }
 
-        async function subscribePush(reg) {
-            const sub = await reg.pushManager.subscribe({
-                userVisibleOnly: true,
-                applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
-            });
-            await fetch(SUBSCRIBE_URL, {
+        async function saveSubscription(sub) {
+            const payload = { ...sub.toJSON(), contentEncoding: 'aes128gcm' };
+            const res = await fetch(SUBSCRIBE_URL, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': CSRF },
-                body: JSON.stringify(sub.toJSON()),
+                body: JSON.stringify(payload),
             });
+            if (!res.ok) throw new Error('[Push] Gagal simpan subscription: ' + res.status);
         }
 
         async function initPush() {
             const reg = await navigator.serviceWorker.register('{{ asset('sw.js') }}');
             await navigator.serviceWorker.ready;
 
+            // Cek izin dulu — kalau denied, tidak lanjut
+            if (Notification.permission === 'denied') {
+                console.warn('[Push] Izin notifikasi ditolak oleh user di browser.');
+                return;
+            }
+
             const existing = await reg.pushManager.getSubscription();
             if (existing) {
-                // Browser sudah subscribe tapi server mungkin belum punya — kirim ulang
-                await fetch(SUBSCRIBE_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': CSRF },
-                    body: JSON.stringify(existing.toJSON()),
-                });
+                await saveSubscription(existing);
                 return;
             }
 
             // Minta izin notifikasi
             const permission = await Notification.requestPermission();
-            if (permission === 'granted') {
-                await subscribePush(reg);
+            if (permission !== 'granted') {
+                console.warn('[Push] Izin notifikasi tidak diberikan:', permission);
+                return;
             }
+
+            const sub = await reg.pushManager.subscribe({
+                userVisibleOnly: true,
+                applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+            });
+            await saveSubscription(sub);
+            console.log('[Push] Subscribed berhasil.');
         }
 
         window.addEventListener('load', () => {
-            initPush().catch(err => console.warn('Push init:', err));
+            initPush().catch(err => console.error('[Push] Error:', err));
         });
     })();
     </script>

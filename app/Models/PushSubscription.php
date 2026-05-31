@@ -24,7 +24,7 @@ class PushSubscription extends Model
             [
                 'public_key'       => $sub['keys']['p256dh'] ?? null,
                 'auth_token'       => $sub['keys']['auth']   ?? null,
-                'content_encoding' => $sub['contentEncoding'] ?? 'aesgcm',
+                'content_encoding' => $sub['contentEncoding'] ?? 'aes128gcm',
             ]
         );
     }
