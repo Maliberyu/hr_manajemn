@@ -15,6 +15,12 @@
     <link rel="apple-touch-icon" sizes="152x152" href="{{ asset('images/iconhrm.png') }}">
     <link rel="apple-touch-icon" sizes="120x120" href="{{ asset('images/iconhrm.png') }}">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
+    <style>
+        #hr-loading-overlay{opacity:0;pointer-events:none;transition:opacity .22s ease}
+        #hr-loading-overlay.hr-show{opacity:1;pointer-events:all}
+        #hr-spinner-ring{width:52px;height:52px;border-radius:50%;border:4px solid rgba(255,255,255,.3);border-top-color:#fff;animation:hr-spin .7s linear infinite;box-shadow:0 0 20px rgba(255,255,255,.3)}
+        @keyframes hr-spin{to{transform:rotate(360deg)}}
+    </style>
 </head>
 <body class="min-h-screen bg-gradient-to-br from-blue-900 via-blue-800 to-indigo-900 flex items-center justify-center p-4">
 
@@ -135,6 +141,12 @@
         </p>
     </div>
 
+    <div id="hr-loading-overlay"
+         class="fixed inset-0 z-[9999] flex flex-col items-center justify-center gap-4">
+        <div id="hr-spinner-ring"></div>
+        <p id="hr-loading-text" class="text-sm font-semibold text-white drop-shadow tracking-wide">Memuat…</p>
+    </div>
+
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
@@ -142,6 +154,23 @@
                     .catch(err => console.warn('SW registration failed:', err));
             });
         }
+    </script>
+    <script>
+    (function () {
+        var overlay = document.getElementById('hr-loading-overlay');
+        var txt     = document.getElementById('hr-loading-text');
+        var timer   = null;
+        function show(label) {
+            if (timer) clearTimeout(timer);
+            if (txt) txt.textContent = (label || 'Memuat') + '…';
+            if (overlay) overlay.classList.add('hr-show');
+            timer = setTimeout(function(){ overlay && overlay.classList.remove('hr-show'); }, 6000);
+        }
+        document.addEventListener('submit', function (e) {
+            if (e.defaultPrevented) return;
+            show('Memproses');
+        });
+    }());
     </script>
 </body>
 </html>
