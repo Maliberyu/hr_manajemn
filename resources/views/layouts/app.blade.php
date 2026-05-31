@@ -20,9 +20,7 @@
     <style>
         #hr-loading-overlay{opacity:0;pointer-events:none;transition:opacity .22s ease}
         #hr-loading-overlay.hr-show{opacity:1;pointer-events:all}
-        #hr-loading-card{transform:scale(.9) translateY(8px);transition:transform .28s cubic-bezier(.34,1.56,.64,1)}
-        #hr-loading-overlay.hr-show #hr-loading-card{transform:scale(1) translateY(0)}
-        #hr-spinner-ring{width:46px;height:46px;border-radius:50%;border:3.5px solid #e5e7eb;border-top-color:#2563eb;animation:hr-spin .7s linear infinite}
+        #hr-spinner-ring{width:52px;height:52px;border-radius:50%;border:4px solid rgba(255,255,255,.3);border-top-color:#3b82f6;animation:hr-spin .7s linear infinite;box-shadow:0 0 20px rgba(59,130,246,.5)}
         @keyframes hr-spin{to{transform:rotate(360deg)}}
     </style>
 </head>
@@ -982,11 +980,9 @@
 
     {{-- ── Loading Overlay (tengah layar) ────────────────────────────────────── --}}
     <div id="hr-loading-overlay"
-         class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur-[2px]">
-        <div id="hr-loading-card" class="bg-white rounded-2xl shadow-2xl px-12 py-8 flex flex-col items-center gap-5">
-            <div id="hr-spinner-ring"></div>
-            <p id="hr-loading-text" class="text-sm font-semibold text-gray-500 tracking-wide">Memuat…</p>
-        </div>
+         class="fixed inset-0 z-[9999] flex flex-col items-center justify-center gap-4">
+        <div id="hr-spinner-ring"></div>
+        <p id="hr-loading-text" class="text-sm font-semibold text-white drop-shadow tracking-wide">Memuat…</p>
     </div>
 
     {{-- ── Global Loading State (form submit + navigasi link) ──────────────── --}}
