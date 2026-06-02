@@ -14,7 +14,12 @@ class EssBerkasController extends Controller
     private function pegawai()
     {
         $pegawai = auth()->user()->pegawai;
-        abort_if(!$pegawai, 403, 'Akun belum terhubung ke data pegawai.');
+        if (!$pegawai) {
+            throw new \Illuminate\Http\Exceptions\HttpResponseException(
+                redirect()->route('dashboard')
+                    ->with('error', 'Akun Anda belum terhubung ke data pegawai. Hubungi admin untuk mengatur.')
+            );
+        }
         return $pegawai;
     }
 
