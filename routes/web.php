@@ -156,7 +156,7 @@ Route::middleware(['auth'])->group(function () {
     });
 
     // ── Ijin Khusus (baru, dinamis) ────────────────────────────────────────────
-    Route::prefix('ijin-khusus')->name('ijin-khusus.')->middleware('feature:cuti')->group(function () {
+    Route::prefix('ijin-khusus')->name('ijin-khusus.')->middleware('feature:ijin_khusus')->group(function () {
         Route::get('/',                          [IjinKhususController::class, 'index'])->name('index');
         Route::get('/buat',                      [IjinKhususController::class, 'create'])->name('create');
         Route::post('/',                         [IjinKhususController::class, 'store'])->name('store');

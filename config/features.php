@@ -14,6 +14,7 @@ return [
     */
 
     'cuti'        => env('FEATURE_CUTI', true),
+    'ijin_khusus' => env('FEATURE_IJIN_KHUSUS', true),
     'kontrak'     => env('FEATURE_KONTRAK', true),
     'ess_berkas'  => env('FEATURE_ESS_BERKAS', true),
     'lembur'      => env('FEATURE_LEMBUR', true),
