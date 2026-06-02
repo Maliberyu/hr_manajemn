@@ -233,7 +233,7 @@
     </div>
 
     <p class="text-center text-blue-200 text-xs mt-5">
-        &copy; {{ date('Y') }} HR Manajemen. Respati; All rights reserved.
+        &copy; {{ date('Y') }} HR Manajemen; All rights reserved.
     </p>
 </div>
 

@@ -907,7 +907,7 @@
 
         {{-- FOOTER --}}
         <footer class="py-3 px-6 border-t border-gray-100 text-center text-xs text-gray-400">
-            &copy; {{ date('Y') }} HR Manajemen — Respati; All rights reserved.
+            &copy; {{ date('Y') }} HR Manajemen; All rights reserved.
         </footer>
 
     </div>
